@@ -101,6 +101,8 @@ public enum LongueurSeparateur {
     public static let visible: Double = 12
     /// Longueur quand le séparateur doit être invisible tout en restant à sa place.
     public static let invisible: Double = 0
+    /// Second séparateur à l'écran : la place de son repère (œil barré).
+    public static let repere: Double = 22
 
     /// Un `NSStatusItem` ne peut pousser une icône au-delà de la largeur de l'écran le plus large : sa position
     /// x est au plus cette largeur. Toutes les barres affichent les mêmes icônes, donc on prend le maximum.

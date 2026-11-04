@@ -10,7 +10,7 @@ public struct Reglages: Codable, Equatable, Sendable {
     public var afficherSeparateur = true
     public var revelerAuSurvol = false
     // Sections
-    public var sectionToujoursMasquee = false
+    public var sectionToujoursMasquee = true
     // Indicateurs
     public var afficherDisque = true
     // Raccourcis

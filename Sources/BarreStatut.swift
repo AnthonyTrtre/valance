@@ -50,14 +50,13 @@ final class BarreStatut: NSObject {
 
     func activerToujoursMasque(_ actif: Bool) {
         if actif, toujoursMasque == nil {
-            let item = NSStatusBar.system.statusItem(withLength: LongueurSeparateur.visible)
+            let item = NSStatusBar.system.statusItem(withLength: LongueurSeparateur.repere)
             item.autosaveName = Self.nomToujoursMasque
             item.button?.target = self
             item.button?.action = #selector(clic(_:))
             item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
-            item.button?.image = Self.imageSeparateur
-            item.button?.appearsDisabled = true
-            item.button?.toolTip = "Second séparateur : les icônes à sa gauche ne se montrent qu'au ⌥-clic sur la flèche."
+            if let b = item.button { Self.ajouterRepere(b) }
+            item.button?.toolTip = "Les icônes à gauche de l'œil barré restent cachées ; ⌥-clic sur la flèche pour les voir."
             item.button?.setAccessibilityLabel("Second séparateur de Valance")
             toujoursMasque = item
         } else if !actif, let item = toujoursMasque {
@@ -71,15 +70,34 @@ final class BarreStatut: NSObject {
     func appliquer(_ l: Longueurs, visibilite: Visibilite, afficherSeparateur: Bool) {
         // Élargir d'abord le séparateur qui masque, puis rétrécir l'autre : pas d'éclair d'icônes.
         let elargirAvant = (l.toujoursMasque ?? 0) > l.separateur
-        if elargirAvant, let t = toujoursMasque, let lt = l.toujoursMasque { regler(t, longueur: lt, afficher: afficherSeparateur) }
+        if elargirAvant, let t = toujoursMasque, let lt = l.toujoursMasque { reglerToujoursMasque(t, longueur: lt) }
         regler(separateur, longueur: l.separateur, afficher: afficherSeparateur)
-        if !elargirAvant, let t = toujoursMasque, let lt = l.toujoursMasque { regler(t, longueur: lt, afficher: afficherSeparateur) }
+        if !elargirAvant, let t = toujoursMasque, let lt = l.toujoursMasque { reglerToujoursMasque(t, longueur: lt) }
     }
 
     private func regler(_ item: NSStatusItem, longueur: Double, afficher: Bool) {
         let court = longueur <= LongueurSeparateur.visible
         item.button?.image = (court && afficher) ? Self.imageSeparateur : nil
         item.length = CGFloat(max(0, longueur))
+    }
+
+    /// Le second séparateur garde un repère (œil barré) à son bord droit, même élargi : on voit où ⌘-glisser une
+    /// icône pour la cacher toujours. Un bouton de barre centre son image : le repère est une vue collée à droite.
+    private func reglerToujoursMasque(_ item: NSStatusItem, longueur: Double) {
+        item.length = CGFloat(max(0, longueur))
+        item.button?.subviews.first { $0 is NSImageView }?.isHidden = longueur <= 0
+    }
+
+    private static func ajouterRepere(_ bouton: NSStatusBarButton) {
+        let image = NSImage(systemSymbolName: "eye.slash", accessibilityDescription: "Toujours masquées")?
+            .withSymbolConfiguration(.init(pointSize: 11, weight: .regular))
+        image?.isTemplate = true
+        let vue = NSImageView(frame: NSRect(x: bouton.bounds.maxX - LongueurSeparateur.repere, y: 0,
+                                            width: LongueurSeparateur.repere, height: bouton.bounds.height))
+        vue.image = image
+        vue.contentTintColor = .tertiaryLabelColor
+        vue.autoresizingMask = [.minXMargin, .height]
+        bouton.addSubview(vue)
     }
 
     func mettreAJourFleche(visibilite: Visibilite, alerte: String?) {

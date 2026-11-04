@@ -59,11 +59,11 @@ public enum Disposition {
         switch visibilite {
         case .masquee:
             // Le second séparateur est déjà hors de l'écran (à gauche du premier) : inutile de l'élargir.
-            return Longueurs(separateur: longueurMasquage, toujoursMasque: court)
+            return Longueurs(separateur: longueurMasquage, toujoursMasque: LongueurSeparateur.repere)
         case .revelee:
             return Longueurs(separateur: court, toujoursMasque: longueurMasquage)
         case .toutRevele:
-            return Longueurs(separateur: court, toujoursMasque: court)
+            return Longueurs(separateur: court, toujoursMasque: LongueurSeparateur.repere)
         }
     }
 

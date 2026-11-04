@@ -16,13 +16,13 @@ struct DispositionTests {
     }
 
     @Test func longueursAvecSectionToujoursMasquee() {
-        let v = LongueurSeparateur.visible
+        let v = LongueurSeparateur.visible, r = LongueurSeparateur.repere   // le second garde la place de son repère
         #expect(Disposition.longueurs(pour: .masquee, sectionToujoursMasquee: true, afficherSeparateur: true, longueurMasquage: L)
-                == Longueurs(separateur: L, toujoursMasque: v))
+                == Longueurs(separateur: L, toujoursMasque: r))
         #expect(Disposition.longueurs(pour: .revelee, sectionToujoursMasquee: true, afficherSeparateur: true, longueurMasquage: L)
                 == Longueurs(separateur: v, toujoursMasque: L))
         #expect(Disposition.longueurs(pour: .toutRevele, sectionToujoursMasquee: true, afficherSeparateur: true, longueurMasquage: L)
-                == Longueurs(separateur: v, toujoursMasque: v))
+                == Longueurs(separateur: v, toujoursMasque: r))
     }
 
     @Test func unSeulSeparateurLongATousLesCoups() {

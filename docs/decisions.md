@@ -56,3 +56,9 @@ est ⌘-glissée par Valance à gauche du séparateur au moment de masquer, comm
 position écrite à la main ne marche pas pendant que l'app tourne (AppKit efface la position au retrait). La révélation
 dans la barre reste jusqu'au clic suivant ; le panneau du dessous (quand les icônes ne tiennent pas, MacBook seul) se
 ferme seul dès que la souris quitte le panneau et la barre juste au-dessus.
+
+## V10 — Trois zones dans la barre (0.3.3)
+
+La section « toujours masquée » est active par défaut. Son séparateur porte un repère, un œil barré collé à son bord droit
+(une vue, car un bouton de barre centre son image), visible même quand il est élargi : à droite de la flèche, toujours
+visible ; entre l'œil et la flèche, visible au clic ; à gauche de l'œil, caché sauf au ⌥-clic.
