@@ -45,6 +45,7 @@ final class Controleur {
     @ObservationIgnored private let persistance: Persistance
     @ObservationIgnored private var barre: BarreStatut?
     @ObservationIgnored private var disque: IndicateurDisque?
+    @ObservationIgnored private var relaisMenu: RelaisMenu?
     @ObservationIgnored private let raccourcis = RaccourcisGlobaux()
     @ObservationIgnored private let barreSecondaire = BarreSecondaire()
     @ObservationIgnored private var tacheRepli: Task<Void, Never>?
@@ -485,17 +486,88 @@ final class Controleur {
 
     /// Clic relayé depuis la barre secondaire : on révèle, puis on « presse » l'icône par l'Accessibilité si
     /// on sait qui elle est ; sinon l'utilisateur clique lui-même sur l'icône révélée.
+    /// 1. Vrai menu (la plupart des apps) : lu par l'Accessibilité et réaffiché sous le panneau, car l'icône cachée
+    ///    l'ouvrirait hors de l'écran. 2. Sinon (Electron, fenêtres surgissantes) : on révèle et on clique vraiment sur
+    ///    l'icône si elle est à l'écran. 3. Sinon : on ouvre l'app.
     private func activer(_ icone: IconeBarre) {
-        evenement(.revelerTemporairement(duree: max(reglages.delaiRepli, 5)))
-        guard let e = icone.element, LecteurAccessibilite.estAutorise else { return }
-        let pid = e.pid, rang = e.rang
-        differer(0.35) {
-            Task {
-                _ = await avecEcheance(1, file: fileAccessibilite) { @Sendable in
-                    LecteurAccessibilite.presser(pid: pid, rang: rang)
-                }
+        guard let e = icone.element, LecteurAccessibilite.estAutorise else {
+            evenement(.revelerTemporairement(duree: max(reglages.delaiRepli, 5)))
+            return
+        }
+        let pid = e.pid, rang = e.rang, cle = icone.cle, ou = NSEvent.mouseLocation
+        Task { @MainActor [weak self] in
+            let menu = await avecEcheance(2, file: fileMenus) { @Sendable in LecteurAccessibilite.lireMenu(pid: pid, rang: rang) } ?? nil
+            guard let self else { return }
+            if let menu, !menu.isEmpty {
+                self.afficherMenu(menu, pid: pid, rang: rang, en: ou)
+            } else {
+                await self.cliquerVraiment(cle: cle, pid: pid)
             }
         }
+    }
+
+    private func afficherMenu(_ entrees: [EntreeMenu], pid: pid_t, rang: Int, en point: NSPoint) {
+        let relais = RelaisMenu { chemin in
+            Task {
+                let ok = await avecEcheance(2, file: fileMenus) { @Sendable in
+                    LecteurAccessibilite.choisir(pid: pid, rang: rang, chemin: chemin)
+                }
+                Journal.app.info("Menu relayé, choix \(chemin, privacy: .public) : \(ok == true ? "fait" : "échec", privacy: .public)")
+            }
+        }
+        let menu = relais.construire(entrees)
+        relaisMenu = relais
+        menu.popUp(positioning: nil, at: NSPoint(x: point.x - 8, y: point.y - 14), in: nil)
+    }
+
+    /// Sur un MacBook seul, l'icône révélée tombe souvent sous l'encoche, à quelques points de la partie visible.
+    /// macOS refuse d'y déposer une icône : Valance libère plutôt la place de ses propres icônes (espace disque, flèche),
+    /// le temps du clic, ce qui décale vers la droite tout ce qui est à leur gauche. Elles reviennent au clic suivant.
+    private func cliquerVraiment(cle: String, pid: pid_t) async {
+        evenement(.revelerTemporairement(duree: max(reglages.delaiRepli, 8)))
+        try? await Task.sleep(for: .milliseconds(450))
+        let h = EcransMac.hauteurPrincipal, hb = EcransMac.hauteurBarreParDefaut
+        func atteignable(_ c: Cadre) -> Bool {
+            Rangement.estAtteignable(x: c.milieuX, y: c.milieuY, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb)
+        }
+        var lu = await relire(cle)
+        if let x = lu?.cadre, !atteignable(x), Rangement.depotSousEncoche(x: x.milieuX, y: x.milieuY, ecrans: ecrans,
+                                                                          hauteurEcranPrincipal: h, hauteurParDefaut: hb) != nil {
+            liberer(true)
+            try? await Task.sleep(for: .milliseconds(350))
+            lu = await relire(cle)
+        }
+        if let x = lu?.cadre, atteignable(x) {
+            Deplaceur.cliquer(CGPoint(x: x.milieuX, y: x.milieuY))
+            if placeLiberee { rendreAuClicSuivant() }
+            return
+        }
+        liberer(false)
+        evenement(.masquer)
+        NSRunningApplication(processIdentifier: pid)?.activate()
+        Journal.app.info("\(cle, privacy: .public) : icône hors de l'écran, app ouverte à la place")
+    }
+
+    @ObservationIgnored private var placeLiberee = false
+    @ObservationIgnored private var moniteurRetour: Any?
+
+    private func liberer(_ oui: Bool) {
+        guard oui != placeLiberee else { return }
+        placeLiberee = oui
+        barre?.reduireFleche(oui)
+        if reglages.afficherDisque { disque?.visible = !oui }
+        if !oui, let m = moniteurRetour { NSEvent.removeMonitor(m); moniteurRetour = nil }
+    }
+
+    /// Le menu ou la fenêtre de l'app se ferme au clic suivant : nos icônes reviennent alors (au plus tard 30 s après).
+    private func rendreAuClicSuivant() {
+        differer(0.5) { [weak self] in
+            guard let self, self.placeLiberee, self.moniteurRetour == nil else { return }
+            self.moniteurRetour = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] _ in
+                MainActor.assumeIsolated { self?.differer(0.3) { [weak self] in self?.liberer(false) } }
+            }
+        }
+        differer(30) { [weak self] in self?.liberer(false) }
     }
 
     // MARK: - Barre secondaire (Enregistrement de l'écran)
@@ -665,7 +737,7 @@ final class Controleur {
     private func relire(_ cle: String) async -> ElementAccessible? {
         let cibles = LecteurAccessibilite.cibles().filter { c in icones.contains { $0.cle == cle && $0.element?.pid == c.pid } }
         guard !cibles.isEmpty else { return nil }
-        let releve = await avecEcheance(2, file: fileAccessibilite) { @Sendable in LecteurAccessibilite.lire(cibles, budget: 1.5) }
+        let releve = await avecEcheance(2, file: fileMenus) { @Sendable in LecteurAccessibilite.lire(cibles, budget: 1.5) }
         return releve?.elements.first { IconeBarre(fenetre: nil, element: $0, section: .visible).cle == cle }
     }
 
@@ -769,5 +841,33 @@ final class Controleur {
             try? await Task.sleep(for: .milliseconds(Int(secondes * 1000)))
             action()
         }
+    }
+}
+
+/// Menu de Valance qui reproduit celui d'une icône cachée ; un choix est rejoué dans le vrai menu.
+@MainActor
+final class RelaisMenu: NSObject {
+    private let rejouer: ([Int]) -> Void
+
+    init(rejouer: @escaping ([Int]) -> Void) { self.rejouer = rejouer }
+
+    func construire(_ entrees: [EntreeMenu], chemin: [Int] = []) -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        for (i, e) in entrees.enumerated() {
+            if e.separateur { menu.addItem(.separator()); continue }
+            let item = NSMenuItem(title: e.titre, action: e.enfants.isEmpty ? #selector(choisi(_:)) : nil, keyEquivalent: "")
+            item.target = self
+            item.isEnabled = e.actif
+            item.state = e.coche ? .on : .off
+            item.representedObject = chemin + [i]
+            if !e.enfants.isEmpty { item.submenu = construire(e.enfants, chemin: chemin + [i]) }
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    @objc private func choisi(_ item: NSMenuItem) {
+        if let chemin = item.representedObject as? [Int] { rejouer(chemin) }
     }
 }

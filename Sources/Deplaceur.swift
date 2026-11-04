@@ -32,5 +32,14 @@ enum Deplaceur {
         poster(.mouseMoved, origine, commande: false)
     }
 
+    /// Vrai clic sur une icône (apps qui ne répondent pas à l'Accessibilité, comme celles faites avec Electron).
+    /// Le curseur reste sur l'icône : c'est là que s'ouvre ce qu'elle montre.
+    static func cliquer(_ p: CGPoint) {
+        let source = CGEventSource(stateID: .hidSystemState)
+        for type in [CGEventType.mouseMoved, .leftMouseDown, .leftMouseUp] {
+            CGEvent(mouseEventSource: source, mouseType: type, mouseCursorPosition: p, mouseButton: .left)?.post(tap: .cghidEventTap)
+        }
+    }
+
     private static func pause(_ ms: Int) async { try? await Task.sleep(for: .milliseconds(ms)) }
 }

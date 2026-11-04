@@ -5,6 +5,8 @@ import ValanceCoeur
 /// File dédiée aux appels d'Accessibilité. Un appel AX vers une app gelée bloque son appelant : ils ne passent
 /// jamais par le fil principal, et chaque relevé a une échéance globale (`avecEcheance`).
 let fileAccessibilite = DispatchQueue(label: "fr.anthony.valance.accessibilite", qos: .utility)
+/// Menus des icônes (lecture, choix) : à part, pour ne pas attendre derrière un relevé de plusieurs secondes.
+let fileMenus = DispatchQueue(label: "fr.anthony.valance.menus", qos: .userInitiated)
 
 /// App interrogée (copie Sendable des infos de `NSRunningApplication`).
 struct CibleAccessibilite: Sendable, Hashable {
@@ -13,6 +15,15 @@ struct CibleAccessibilite: Sendable, Hashable {
     var nom: String
 
     var cle: String { bundle ?? "pid:\(pid)" }
+}
+
+/// Une entrée du menu d'une icône, lue par l'Accessibilité pour être réaffichée par Valance.
+struct EntreeMenu: Sendable {
+    var titre: String
+    var actif: Bool
+    var coche: Bool
+    var separateur: Bool
+    var enfants: [EntreeMenu]
 }
 
 struct ReleveAccessibilite: Sendable {
@@ -91,6 +102,65 @@ enum LecteurAccessibilite {
         guard liste.indices.contains(rang) else { return false }
         return AXUIElementPerformAction(liste[rang], kAXPressAction as CFString) == .success
     }
+
+    /// Ouvre le menu de l'icône, le lit puis le referme. nil si l'icône n'ouvre pas de vrai menu (Electron et
+    /// fenêtres surgissantes, qui ne répondent qu'à un vrai clic). Hors de l'écran, le menu s'ouvrirait hors de vue :
+    /// Valance le réaffiche lui-même.
+    static func lireMenu(pid: pid_t, rang: Int) -> [EntreeMenu]? {
+        guard let item = item(pid: pid, rang: rang), let menu = ouvrirMenu(item) else { return nil }
+        let entrees = lire(menu)
+        AXUIElementPerformAction(menu, kAXCancelAction as CFString)
+        return entrees
+    }
+
+    /// Rouvre le menu et choisit l'entrée au bout du chemin (indices dans les menus et sous-menus).
+    static func choisir(pid: pid_t, rang: Int, chemin: [Int]) -> Bool {
+        guard let item = item(pid: pid, rang: rang), var menu = ouvrirMenu(item) else { return false }
+        for (n, i) in chemin.enumerated() {
+            let liste = enfants(de: menu)
+            guard liste.indices.contains(i) else { AXUIElementPerformAction(menu, kAXCancelAction as CFString); return false }
+            if n == chemin.count - 1 { return AXUIElementPerformAction(liste[i], kAXPressAction as CFString) == .success }
+            guard let sous = enfants(de: liste[i]).first(where: { role(de: $0) == kAXMenuRole }) else { return false }
+            menu = sous
+        }
+        return false
+    }
+
+    private static func item(pid: pid_t, rang: Int) -> AXUIElement? {
+        let app = AXUIElementCreateApplication(pid)
+        AXUIElementSetMessagingTimeout(app, delaiParMessage)
+        var valeur: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(app, "AXExtrasMenuBar" as CFString, &valeur) == .success,
+              let v = valeur, CFGetTypeID(v) == AXUIElementGetTypeID() else { return nil }
+        let liste = enfants(de: v as! AXUIElement)
+        return liste.indices.contains(rang) ? liste[rang] : nil
+    }
+
+    /// L'appui bloque tant que le menu est ouvert : il part sur une autre file, et l'on guette le menu.
+    private static func ouvrirMenu(_ item: AXUIElement) -> AXUIElement? {
+        nonisolated(unsafe) let cible = item
+        DispatchQueue.global(qos: .userInitiated).async { _ = AXUIElementPerformAction(cible, kAXPressAction as CFString) }
+        for _ in 0..<12 {
+            usleep(60_000)
+            if let m = enfants(de: item).first(where: { role(de: $0) == kAXMenuRole }), !enfants(de: m).isEmpty { return m }
+        }
+        return nil
+    }
+
+    private static func lire(_ menu: AXUIElement, profondeur: Int = 0) -> [EntreeMenu] {
+        enfants(de: menu).map { e in
+            let titre = texte(e, kAXTitleAttribute) ?? ""
+            var actif: CFTypeRef?
+            AXUIElementCopyAttributeValue(e, kAXEnabledAttribute as CFString, &actif)
+            let estActif = (actif as? Bool) ?? true
+            let sous = profondeur < 3 ? enfants(de: e).first { role(de: $0) == kAXMenuRole } : nil
+            return EntreeMenu(titre: titre, actif: estActif, coche: !(texte(e, kAXMenuItemMarkCharAttribute) ?? "").isEmpty,
+                              separateur: titre.isEmpty && !estActif && sous == nil,
+                              enfants: sous.map { lire($0, profondeur: profondeur + 1) } ?? [])
+        }
+    }
+
+    private static func role(de e: AXUIElement) -> String? { texte(e, kAXRoleAttribute) }
 
     /// Bord droit (Quartz) des menus de l'app `pid` (Fichier, Édition…), pour savoir quelle place il reste aux icônes.
     static func finMenus(pid: pid_t) -> Cadre? {

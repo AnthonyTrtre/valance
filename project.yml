@@ -6,8 +6,8 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    MARKETING_VERSION: "0.3.4"
-    CURRENT_PROJECT_VERSION: 7
+    MARKETING_VERSION: "0.3.5"
+    CURRENT_PROJECT_VERSION: 8
     ENABLE_HARDENED_RUNTIME: YES
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: JLT7CMPSRQ   # identité Apple Development stable (D004) : ne pas changer, sinon les autorisations TCC sautent

@@ -111,6 +111,11 @@ final class BarreStatut: NSObject {
         bouton.addSubview(vue)
     }
 
+    /// Flèche réduite à rien, le temps de cliquer sur une icône que l'encoche cachait.
+    func reduireFleche(_ oui: Bool) {
+        fleche.length = oui ? 0 : NSStatusItem.squareLength
+    }
+
     func mettreAJourFleche(visibilite: Visibilite, alerte: String?) {
         let nom: String
         if alerte != nil {

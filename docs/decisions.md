@@ -74,3 +74,12 @@ visible ; entre l'œil et la flèche, visible au clic ; à gauche de l'œil, cac
   qu'un écran sans encoche est branché, au lieu d'un message d'erreur.
 - Réglages → Icônes : « Visible / Au clic / Cachée », l'horloge et le Centre de contrôle (inamovibles) n'y figurent plus,
   la liste technique des apps qui ne répondent pas non plus.
+
+## V12 — Cliquer une icône du panneau ouvre vraiment son menu (0.3.5)
+
+Une icône masquée ouvre son menu là où elle est, donc hors de l'écran. Valance lit le menu par l'Accessibilité
+(`AXExtrasMenuBar` → `AXMenu`), le referme (`AXCancel`) et le réaffiche lui-même sous le panneau ; un choix est rejoué dans
+le vrai menu. Ces appels ont leur propre file : derrière un relevé de plusieurs secondes, ils échouaient. Les apps qui
+ne répondent qu'à un vrai clic (Electron : Plaud ; fenêtres surgissantes) sont révélées puis cliquées ; si l'icône
+tombe sous l'encoche, Valance réduit à rien sa flèche et l'espace disque le temps du clic (ils reviennent au clic
+suivant), car macOS refuse d'y déposer une autre icône. Sinon, l'app elle-même est ouverte.
