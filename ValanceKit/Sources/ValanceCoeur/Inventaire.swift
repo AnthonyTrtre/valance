@@ -64,9 +64,17 @@ public struct IconeBarre: Equatable, Hashable, Sendable, Identifiable {
     public var id: String { cle }
 
     /// Nom à afficher : titre AX, sinon nom de l'app, sinon « Icône ».
+    /// Icônes que macOS ne laisse pas déplacer : l'horloge et le Centre de contrôle lui-même.
+    public var estFixe: Bool {
+        guard let e = element, e.bundle == "com.apple.controlcenter" else { return false }
+        let t = (e.titre ?? "").lowercased()
+        return t.isEmpty || t == e.nomApp.lowercased() || t.contains("clock") || t.contains("horloge")
+    }
+
     public var nom: String {
         if let e = element {
-            if let t = e.titre, !t.isEmpty, t != e.nomApp { return "\(e.nomApp) — \(t)" }
+            // « Wi‑Fi, connected, 3 bars » : l'état après la virgule change sans cesse, seul le nom compte.
+            if let t = e.titre?.split(separator: ",").first.map(String.init), !t.isEmpty, t != e.nomApp { return "\(e.nomApp) — \(t)" }
             return e.nomApp
         }
         return "Icône sans nom"

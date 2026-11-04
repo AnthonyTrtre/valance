@@ -62,3 +62,15 @@ ferme seul dès que la souris quitte le panneau et la barre juste au-dessus.
 La section « toujours masquée » est active par défaut. Son séparateur porte un repère, un œil barré collé à son bord droit
 (une vue, car un bouton de barre centre son image), visible même quand il est élargi : à droite de la flèche, toujours
 visible ; entre l'œil et la flèche, visible au clic ; à gauche de l'œil, caché sauf au ⌥-clic.
+
+## V11 — Réglages qu'on change et rechange (0.3.4)
+
+- Sous macOS 26, retirer une icône (`removeStatusItem`) ou la cacher (`isVisible = false`) fait oublier sa place à AppKit :
+  rallumée, elle revient n'importe où (l'espace disque dans la zone masquée, l'œil barré à droite des icônes masquées).
+  Éteindre l'espace disque ou la section « toujours cachée » met donc l'icône à une largeur nulle, à sa place.
+- Le premier relevé attend que macOS donne la place de nos icônes, et le relevé qui suit un rangement attend que les
+  icônes soient revenues : sinon tout paraissait « visible » quelques secondes.
+- MacBook seul : une icône sous l'encoche ne peut pas être saisie. Le choix est retenu (« en attente ») et appliqué dès
+  qu'un écran sans encoche est branché, au lieu d'un message d'erreur.
+- Réglages → Icônes : « Visible / Au clic / Cachée », l'horloge et le Centre de contrôle (inamovibles) n'y figurent plus,
+  la liste technique des apps qui ne répondent pas non plus.

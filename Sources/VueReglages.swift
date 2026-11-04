@@ -316,14 +316,15 @@ struct VueInventaire: View {
                     if let m = controleur.messageRangement {
                         Label("Rangement impossible : \(m).", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange)
                     }
-                    if !controleur.appsEcartees.isEmpty {
-                        Text("Apps qui ne répondent pas (ignorées 5 min) : \(controleur.appsEcartees.joined(separator: ", "))")
-                            .font(.caption).foregroundStyle(.orange)
+                    if !controleur.enAttente.isEmpty {
+                        Label("\(controleur.enAttente.count) icône(s) sous l'encoche, impossibles à saisir sur cet écran : Valance "
+                              + "les range dès que vous branchez un écran plus large.", systemImage: "clock")
+                            .foregroundStyle(.secondary)
                     }
                 }
                 ForEach(sections, id: \.self) { section in
-                    let liste = controleur.icones.filter { $0.section == section && $0.element != nil }
-                    Section("\(section.libelle) (\(liste.count))") {
+                    let liste = controleur.icones.filter { $0.section == section && $0.element != nil && !$0.estFixe }
+                    Section("\(section.libelleZone) (\(liste.count))") {
                         ForEach(liste) { i in LigneIcone(controleur: controleur, icone: i, sections: sections) }
                     }
                 }
@@ -346,17 +347,21 @@ struct LigneIcone: View {
             if let pid = icone.element?.pid, let image = NSRunningApplication(processIdentifier: pid)?.icon {
                 Image(nsImage: image).resizable().frame(width: 18, height: 18)
             }
-            Text(icone.nom)
+            Text(icone.nom).lineLimit(1).truncationMode(.middle).help(icone.nom)
             if controleur.rangementEnCours == icone.cle { ProgressView().controlSize(.small) }
+            if let s = controleur.enAttente[icone.cle] {
+                Image(systemName: "clock").foregroundStyle(.secondary)
+                    .help("Ira en « \(s.libelle) » dès qu'un écran plus large sera branché")
+            }
             Spacer()
             Picker("", selection: Binding(
-                get: { icone.section },
+                get: { MainActor.assumeIsolated { controleur.enAttente[icone.cle] ?? icone.section } },
                 set: { s in MainActor.assumeIsolated { controleur.ranger(icone, vers: s) } })) {
-                ForEach(sections, id: \.self) { Text($0.libelle).tag($0) }
+                ForEach(sections, id: \.self) { Text($0.libelleCourt).tag($0) }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
-            .frame(width: sections.count == 3 ? 330 : 200)
+            .fixedSize()
             if let bundle = icone.element?.bundle {
                 Toggle("Signaler", isOn: Binding(
                     get: { MainActor.assumeIsolated { controleur.regle(pour: bundle).signalerChangements } },
@@ -364,6 +369,7 @@ struct LigneIcone: View {
                         var r = controleur.regle(pour: bundle); r.signalerChangements = v; controleur.definirRegle(r, pour: bundle)
                     } }))
                     .toggleStyle(.checkbox)
+                    .fixedSize()
                     .help("Révéler brièvement la barre quand l'image de cette icône change")
                     .disabled(!controleur.reglages.signalerChangements)
             }
@@ -435,6 +441,25 @@ struct VueAPropos: View {
                 LabeledContent("Identifier les icônes", value: "Accessibilité (si activé)")
                 LabeledContent("Barre secondaire, signalement", value: "Enregistrement de l'écran (si activé)")
             }
+        }
+    }
+}
+
+extension ValanceCoeur.Section {
+    /// Les trois zones de la barre, telles qu'on les voit.
+    var libelleCourt: String {
+        switch self {
+        case .visible: "Visible"
+        case .masquee: "Au clic"
+        case .toujoursMasquee: "Cachée"
+        }
+    }
+
+    var libelleZone: String {
+        switch self {
+        case .visible: "Toujours visibles"
+        case .masquee: "Visibles au clic sur la flèche"
+        case .toujoursMasquee: "Toujours cachées (⌥-clic)"
         }
     }
 }

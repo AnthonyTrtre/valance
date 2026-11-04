@@ -21,6 +21,7 @@ final class IndicateurDisque: NSObject, NSMenuDelegate {
         }
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.autosaveName = Self.nom
+        item.isVisible = true
         super.init()
         // Texte seul : sur un MacBook à encoche, chaque point de barre compte.
         let menu = NSMenu()
@@ -35,12 +36,21 @@ final class IndicateurDisque: NSObject, NSMenuDelegate {
         }
     }
 
+    /// Éteint : largeur nulle, pas `isVisible` ni retrait, qui font oublier sa place à AppKit (macOS 26).
+    var visible = true {
+        didSet {
+            item.length = visible ? NSStatusItem.variableLength : 0
+            if visible { actualiser() } else { item.button?.attributedTitle = NSAttributedString() }
+        }
+    }
+
     func retirer() {
         tache?.cancel()
         NSStatusBar.system.removeStatusItem(item)
     }
 
     func actualiser() {
+        guard visible else { return }
         guard let v = Self.volumes().first else { item.button?.title = "—"; return }
         let titre = FormatDisque.court(v.libre)
         item.button?.attributedTitle = NSAttributedString(string: titre, attributes: [

@@ -17,6 +17,7 @@ final class BarreStatut: NSObject {
     let fleche: NSStatusItem
     let separateur: NSStatusItem
     private var toujoursMasque: NSStatusItem?
+    private var toujoursMasqueCache: NSStatusItem?
     var surClic: ((Clic) -> Void)?
 
     private static let imageSeparateur: NSImage = BarreStatut.dessinerSeparateur()
@@ -48,8 +49,17 @@ final class BarreStatut: NSObject {
 
     // MARK: - Section « toujours masquée »
 
+    /// Désactivé, le second séparateur passe à une largeur nulle plutôt que d'être retiré ou caché : sous macOS 26,
+    /// AppKit oublie la place d'une icône retirée ou cachée (`isVisible`), et la recréer la poserait n'importe où.
     func activerToujoursMasque(_ actif: Bool) {
-        if actif, toujoursMasque == nil {
+        if actif, let item = toujoursMasqueCache {
+            toujoursMasque = item
+            toujoursMasqueCache = nil
+        } else if actif, toujoursMasque == nil {
+            // Première fois : tout à gauche (positions comptées depuis le bord droit), sinon toutes les icônes
+            // masquées se retrouveraient « toujours cachées ».
+            let d = UserDefaults.standard, cle = "NSStatusItem Preferred Position \(Self.nomToujoursMasque)"
+            if d.object(forKey: cle) == nil { d.set(5000.0, forKey: cle) }
             let item = NSStatusBar.system.statusItem(withLength: LongueurSeparateur.repere)
             item.autosaveName = Self.nomToujoursMasque
             item.button?.target = self
@@ -60,7 +70,8 @@ final class BarreStatut: NSObject {
             item.button?.setAccessibilityLabel("Second séparateur de Valance")
             toujoursMasque = item
         } else if !actif, let item = toujoursMasque {
-            NSStatusBar.system.removeStatusItem(item)
+            reglerToujoursMasque(item, longueur: 0)
+            toujoursMasqueCache = item
             toujoursMasque = nil
         }
     }
@@ -159,10 +170,11 @@ final class BarreStatut: NSObject {
     }
 
     func retirer() {
-        for item in [fleche, separateur, toujoursMasque].compactMap({ $0 }) {
+        for item in [fleche, separateur, toujoursMasque, toujoursMasqueCache].compactMap({ $0 }) {
             NSStatusBar.system.removeStatusItem(item)
         }
         toujoursMasque = nil
+        toujoursMasqueCache = nil
     }
 
     /// Trait vertical discret. Créé hors de l'acteur principal : AppKit peut appeler le dessin sur un autre fil.

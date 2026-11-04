@@ -27,6 +27,14 @@ final class Controleur {
     /// Rangement (V6) : icône en cours de déplacement et dernier message d'échec.
     private(set) var rangementEnCours: String?
     private(set) var messageRangement: String?
+    /// Rangements impossibles sur l'écran actuel (icône sous l'encoche) : refaits dès qu'un écran change.
+    private(set) var enAttente: [String: ValanceCoeur.Section] = {
+        let brut = UserDefaults.standard.dictionary(forKey: "valance.enAttente.v1") as? [String: String] ?? [:]
+        return brut.compactMapValues { ValanceCoeur.Section(rawValue: $0) }
+    }() {
+        didSet { UserDefaults.standard.set(enAttente.mapValues(\.rawValue), forKey: "valance.enAttente.v1") }
+    }
+    static let attenteEcran = "attente d'un écran plus large"
     private(set) var appsEcartees: [String] = []
     private(set) var dernierReleve: Date?
     private(set) var releveEnCours = false
@@ -78,6 +86,7 @@ final class Controleur {
         ouvertureALaConnexion = OuvertureALaConnexion.active
         rafraichirAutorisations()
         configurerSurvol()
+        reprendreAttente(dans: 8)
         executer(machine.demarrer(maintenant: Date()))
         observerSysteme()
         if reglages.inventaireActive { lancerInventairePeriodique() }
@@ -85,12 +94,12 @@ final class Controleur {
     }
 
     private func afficherDisque(_ oui: Bool) {
+        // Caché plutôt que retiré : il garde sa place dans la barre.
         if oui, disque == nil {
             disque = IndicateurDisque()
             disque?.surReglages = { [weak self] in self?.ouvrirReglages() }
-        } else if !oui {
-            disque?.retirer()
-            disque = nil
+        } else {
+            disque?.visible = oui
         }
     }
 
@@ -350,6 +359,17 @@ final class Controleur {
     private func ecransChanges() {
         actualiserEcrans()
         appliquerLongueurs()
+        reprendreAttente(dans: 3)
+    }
+
+    /// Refait les rangements mis en attente, une fois les icônes relues.
+    func reprendreAttente(dans delai: Double) {
+        // Seulement quand un écran sans encoche est branché : sinon rien n'a changé, inutile de tout révéler.
+        guard !enAttente.isEmpty, reglages.inventaireActive, ecrans.contains(where: { $0.largeurGaucheEncoche == nil }) else { return }
+        differer(delai) { [weak self] in
+            guard let self else { return }
+            for (cle, s) in self.enAttente { if let i = self.icones.first(where: { $0.cle == cle }) { self.ranger(i, vers: s) } }
+        }
     }
 
     func actualiserEcrans() {
@@ -425,6 +445,11 @@ final class Controleur {
     func actualiserInventaire() {
         rafraichirAutorisations()
         guard reglages.inventaireActive, accessibiliteAccordee, !releveEnCours, let barre else { return }
+        // Au lancement, macOS ne donne pas tout de suite la place de nos icônes : sans elle, tout paraîtrait visible.
+        guard barre.cadreSeparateur != nil, barre.cadreFleche != nil else {
+            differer(1) { [weak self] in self?.actualiserInventaire() }
+            return
+        }
         releveEnCours = true
         let maintenant = Date()
         let cibles = LecteurAccessibilite.cibles().filter { !disjoncteur.estOuvert($0.cle, maintenant: maintenant) }
@@ -582,7 +607,8 @@ final class Controleur {
         guard !fileRangement.isEmpty else {
             rangementEnCours = nil
             appliquerLongueurs()
-            actualiserInventaire()
+            // Relu une fois les icônes revenues à leur place, sinon elles paraissent toutes visibles.
+            differer(0.8) { [weak self] in self?.actualiserInventaire() }
             return
         }
         let (cle, vers) = fileRangement.removeFirst()
@@ -594,10 +620,15 @@ final class Controleur {
             try? await Task.sleep(for: .milliseconds(450))
             guard let self else { return }
             let erreur = await self.deplacer(cle: cle, vers: vers)
-            if let erreur {
+            if erreur == Self.attenteEcran {
+                self.enAttente[cle] = vers
+                Journal.app.info("Rangement de \(cle, privacy: .public) en attente d'un écran plus large")
+            } else if let erreur {
+                self.enAttente[cle] = nil
                 self.messageRangement = erreur
                 Journal.app.error("Rangement de \(cle, privacy: .public) : \(erreur, privacy: .public)")
             }
+            if erreur == nil { self.enAttente[cle] = nil }
             self.rangerSuivante()
         }
     }
@@ -622,7 +653,7 @@ final class Controleur {
                                                                    hauteurParDefaut: hb) { arrivee = d; sousEncocheAccepte = true }
             guard Rangement.estAtteignable(x: depart.x, y: depart.y, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb),
                   sousEncocheAccepte || Rangement.estAtteignable(x: arrivee.x, y: arrivee.y, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else {
-                return "l'icône ou la flèche n'est pas visible à l'écran (sous l'encoche ?) : utilisez un écran plus large"
+                return Self.attenteEcran
             }
             await Deplaceur.glisser(de: CGPoint(x: depart.x, y: depart.y), a: CGPoint(x: arrivee.x, y: arrivee.y))
             try? await Task.sleep(for: .milliseconds(500))
