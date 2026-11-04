@@ -33,6 +33,29 @@ struct InventaireTests {
         #expect(!icones.contains { $0.fenetre?.numero == 99 })
     }
 
+    @Test func copiesDesAutresBarres() {
+        // Une barre par écran : chaque icône (et notre séparateur) y a sa copie, ramenée au même endroit.
+        let f = fenetres + [
+            FenetreBarre(numero: 21, cadre: Cadre(x: 101, y: 0, largeur: 30, hauteur: 24)),   // copie de A
+            FenetreBarre(numero: 23, cadre: Cadre(x: 300, y: 0, largeur: 24, hauteur: 24)),   // copie de la 13
+            FenetreBarre(numero: 29, cadre: Cadre(x: 500, y: 0, largeur: 20, hauteur: 24)),   // copie de la nôtre
+        ]
+        let icones = Appariement.apparier(fenetres: f, elements: elements, exclure: [99], separateur: nil, toujoursMasque: nil)
+        #expect(icones.count == 4)
+        #expect(!icones.contains { [21, 23, 29].contains($0.fenetre?.numero ?? 0) })
+    }
+
+    @Test func iconeSystemeDansUneFenetrePlusLarge() {
+        // macOS 26 : Bluetooth, élément de 16 × 22 pt dans une fenêtre de 32 × 24 pt (IoU 0,46).
+        let f = [FenetreBarre(numero: 1, cadre: Cadre(x: -4424, y: -200, largeur: 32, hauteur: 24)),
+                 FenetreBarre(numero: 2, cadre: Cadre(x: -4424, y: -200, largeur: 32, hauteur: 24))]   // copie d'un autre écran
+        let e = [ElementAccessible(pid: 1, bundle: "cc", nomApp: "Centre de contrôle", titre: "Bluetooth",
+                                   cadre: Cadre(x: -4416, y: -196, largeur: 16, hauteur: 22))]
+        let i = Appariement.apparier(fenetres: f, elements: e, separateur: nil, toujoursMasque: nil)
+        #expect(i.count == 1)
+        #expect(i.first?.fenetre?.numero == 1)
+    }
+
     @Test func meilleurScoreDAbord() {
         // Deux éléments proches d'une même fenêtre : le plus ressemblant gagne, l'autre reste seul.
         let f = [FenetreBarre(numero: 1, cadre: c(100))]

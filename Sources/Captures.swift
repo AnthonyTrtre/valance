@@ -15,6 +15,12 @@ struct ImageCapturee: @unchecked Sendable {
 /// Captures **ponctuelles** des icônes par ScreenCaptureKit (`SCScreenshotManager`), jamais de flux continu :
 /// l'indicateur de capture de macOS ne s'allume qu'un instant. Exige l'autorisation Enregistrement de l'écran,
 /// demandée seulement quand l'utilisateur active la barre secondaire.
+/// Filtre et réglages d'une capture, créés puis lus une seule fois chacun : sans partage réel entre tâches.
+private struct Demande: @unchecked Sendable {
+    let filtre: SCContentFilter
+    let config: SCStreamConfiguration
+}
+
 enum Captures {
     static var estAutorise: Bool { CGPreflightScreenCaptureAccess() }
 
@@ -32,20 +38,29 @@ enum Captures {
             Journal.app.error("ScreenCaptureKit : \(error.localizedDescription, privacy: .public)")
             return []
         }
-        var resultat: [ImageCapturee] = []
-        for w in contenu.windows where voulues.contains(w.windowID) {
-            let filtre = SCContentFilter(desktopIndependentWindow: w)
-            let config = SCStreamConfiguration()
-            config.width = max(1, Int((w.frame.width * echelle).rounded()))
-            config.height = max(1, Int((w.frame.height * echelle).rounded()))
-            config.showsCursor = false
-            config.ignoreShadowsSingleWindow = true
-            do {
-                let image = try await SCScreenshotManager.captureImage(contentFilter: filtre, configuration: config)
-                resultat.append(ImageCapturee(numero: w.windowID, image: image, taille: w.frame.size))
-            } catch {
-                Journal.app.debug("Capture de la fenêtre \(w.windowID) impossible : \(error.localizedDescription, privacy: .public)")
+        // En parallèle : une par une, une quarantaine d'icônes prenaient plusieurs secondes.
+        let resultat = await withTaskGroup(of: ImageCapturee?.self) { groupe in
+            for w in contenu.windows where voulues.contains(w.windowID) {
+                let filtre = SCContentFilter(desktopIndependentWindow: w)
+                let config = SCStreamConfiguration()
+                config.width = max(1, Int((w.frame.width * echelle).rounded()))
+                config.height = max(1, Int((w.frame.height * echelle).rounded()))
+                config.showsCursor = false
+                config.ignoreShadowsSingleWindow = true
+                let numero = w.windowID, taille = w.frame.size, demande = Demande(filtre: filtre, config: config)
+                groupe.addTask {
+                    do {
+                        let image = try await SCScreenshotManager.captureImage(contentFilter: demande.filtre, configuration: demande.config)
+                        return ImageCapturee(numero: numero, image: image, taille: taille)
+                    } catch {
+                        Journal.app.debug("Capture de la fenêtre \(numero) impossible : \(error.localizedDescription, privacy: .public)")
+                        return nil
+                    }
+                }
             }
+            var r: [ImageCapturee] = []
+            for await i in groupe { if let i { r.append(i) } }
+            return r
         }
         // Ordre demandé.
         let rang = Dictionary(uniqueKeysWithValues: numeros.enumerated().map { ($1, $0) })

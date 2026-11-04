@@ -89,9 +89,9 @@ struct VueBarreSecondaire: View {
                 Button { choisir(v.icone) } label: {
                     Group {
                         if let image = v.image {
-                            Image(nsImage: image).resizable().interpolation(.high)
+                            Image(nsImage: image).resizable().interpolation(.high).scaledToFit()
                         } else {
-                            Text(String(v.nom.prefix(2))).font(.caption.bold())
+                            Image(systemName: "app.dashed").foregroundStyle(.secondary)
                         }
                     }
                     .frame(width: c.largeur, height: c.hauteur)

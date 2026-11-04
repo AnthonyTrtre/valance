@@ -37,3 +37,13 @@ séparateur, car un dépôt tout contre lui fait sauter l'icône voisine de l'au
 impossible depuis l'encoche (on ne peut pas la saisir). Si la flèche passe sous l'encoche (trop d'icônes visibles), elle
 est invisible : Valance ouvre ses réglages avec un avertissement, une fois par épisode. Un cadre de fenêtre vide (hauteur 0,
 donné par macOS au lancement) vaut « position inconnue », sinon l'ordre paraissait faux et le masquage restait suspendu.
+
+## V8 — Une icône, une seule fois, même sur plusieurs écrans (0.3.2)
+
+Sous macOS 26, chaque barre (une par écran) a sa propre fenêtre pour chaque icône, nos fenêtres comprises. Une fenêtre
+sans élément d'Accessibilité qui recouvre une icône déjà retenue, ou l'une de nos fenêtres, est une copie : on l'écarte.
+Sinon le panneau montrait des doublons sans nom, et la largeur des icônes masquées (copies du séparateur comprises)
+envoyait dans le panneau ce qui tenait dans la barre. Deux cadres désignent la même icône quand leur IoU dépasse 0,5 ou
+que l'un est presque entier dans l'autre (la fenêtre d'une icône système fait deux fois la largeur de son élément).
+Les captures du panneau se font en parallèle ; les icônes de macOS que ScreenCaptureKit ne capture pas reçoivent un
+symbole SF qui leur ressemble.

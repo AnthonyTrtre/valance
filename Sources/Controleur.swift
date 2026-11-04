@@ -450,7 +450,10 @@ final class Controleur {
         if barreSecondaire.estOuverte { barreSecondaire.fermer(); return }
         rafraichirAutorisations()
         guard let barre, let ancre = barre.cadreFlecheCocoa,
-              let ref = Ecrans.ecran(contenant: ancre.milieuX, ancre.milieuY, parmi: ecrans) ?? ecrans.first else { return }
+              let ref = Ecrans.ecran(contenant: ancre.milieuX, ancre.milieuY, parmi: ecrans) ?? ecrans.first else {
+            Journal.app.error("Panneau : flèche introuvable (\(String(describing: self.barre?.cadreFlecheCocoa), privacy: .public))")
+            return
+        }
         // Le panneau s'ouvre sous la barre de l'écran où est la souris ; la flèche y est à la même distance du bord droit.
         let souris = NSEvent.mouseLocation
         let ecran = Ecrans.ecran(contenant: Double(souris.x), Double(souris.y), parmi: ecrans) ?? ref
@@ -468,6 +471,7 @@ final class Controleur {
                 if let capture { self.cacheImages[i.cle] = capture }
                 // Sans Enregistrement de l'écran : l'icône de l'app propriétaire.
                 let image = capture.map { NSImage(cgImage: $0.image, size: $0.taille) }
+                    ?? Self.symboleSysteme(i.element)
                     ?? i.element.flatMap { NSRunningApplication(processIdentifier: $0.pid)?.icon }
                 return Vignette(id: i.cle, nom: i.nom, image: image,
                                 taille: capture?.taille ?? CGSize(width: 22, height: 22), icone: i)
@@ -475,6 +479,24 @@ final class Controleur {
             let message = vignettes.isEmpty ? "Aucune icône masquée : choisissez-les dans Réglages → Icônes." : nil
             self.barreSecondaire.afficher(vignettes, message: message, ancreX: ancreX, ecran: ecran)
         }
+    }
+
+    /// Icônes de macOS (Centre de contrôle, SystemUIServer) que ScreenCaptureKit ne capture pas : un symbole qui
+    /// leur ressemble plutôt que l'icône du Centre de contrôle pour toutes.
+    private static func symboleSysteme(_ e: ElementAccessible?) -> NSImage? {
+        guard let e, let b = e.bundle, b.hasPrefix("com.apple.") else { return nil }
+        let texte = [e.titre, e.identifiant, e.nomApp].compactMap { $0?.lowercased() }.joined(separator: " ")
+        let table: [(String, String)] = [
+            ("bluetooth", "wave.3.right"), ("airdrop", "dot.radiowaves.left.and.right"), ("wi-fi", "wifi"), ("wi‑fi", "wifi"),
+            ("sound", "speaker.wave.2.fill"), ("son", "speaker.wave.2.fill"), ("now playing", "play.circle"),
+            ("écoute", "play.circle"), ("user", "person.crop.circle"), ("utilisateur", "person.crop.circle"),
+            ("battery", "battery.75percent"), ("batterie", "battery.75percent"), ("focus", "moon.fill"),
+            ("concentration", "moon.fill"), ("display", "display"), ("écran", "display"), ("time machine", "clock.arrow.circlepath"),
+            ("systemuiserver", "clock.arrow.circlepath"), ("textinput", "keyboard"), ("clavier", "keyboard"),
+        ]
+        guard let nom = table.first(where: { texte.contains($0.0) })?.1,
+              let image = NSImage(systemSymbolName: nom, accessibilityDescription: e.titre) else { return nil }
+        return image.withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
     }
 
     /// Clic sur la flèche ou raccourci : masque si c'est révélé ; sinon révèle dans la barre ou dans le panneau du
@@ -488,7 +510,9 @@ final class Controleur {
         case .auto:
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                if await self.masqueesTiennentDansLaBarre() { self.evenement(.basculer) } else { self.basculerBarreSecondaire() }
+                let tient = await self.masqueesTiennentDansLaBarre()
+                Journal.app.info("Révélation : \(tient ? "dans la barre" : "panneau", privacy: .public)")
+                if tient { self.evenement(.basculer) } else { self.basculerBarreSecondaire() }
             }
         }
     }

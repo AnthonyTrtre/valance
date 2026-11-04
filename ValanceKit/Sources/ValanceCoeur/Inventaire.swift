@@ -77,6 +77,10 @@ public enum Appariement {
     /// Seuil de ressemblance des cadres (intersection sur union) pour apparier une fenêtre et un élément.
     public static let seuil = 0.5
 
+    /// Même icône : cadres assez ressemblants, ou l'un presque entièrement dans l'autre (la fenêtre d'une icône
+    /// système de macOS 26 fait deux fois la largeur de son élément d'Accessibilité).
+    static func pareils(_ a: Cadre, _ b: Cadre) -> Bool { a.iou(b) >= seuil || a.contenance(b) >= 0.8 }
+
     /// Associe chaque fenêtre de barre à l'élément d'Accessibilité dont le cadre lui ressemble le plus
     /// (glouton par ressemblance décroissante, chaque élément servant une seule fois). Les fenêtres qui
     /// correspondent à nos propres icônes sont exclues. Le résultat est trié de gauche à droite.
@@ -86,8 +90,7 @@ public enum Appariement {
         var couples: [(f: Int, e: Int, score: Double)] = []
         for (i, f) in fen.enumerated() {
             for (j, e) in elements.enumerated() {
-                let s = f.cadre.iou(e.cadre)
-                if s >= seuil { couples.append((i, j, s)) }
+                if pareils(f.cadre, e.cadre) { couples.append((i, j, f.cadre.iou(e.cadre))) }
             }
         }
         couples.sort { $0.score != $1.score ? $0.score > $1.score : ($0.f, $0.e) < ($1.f, $1.e) }
@@ -98,7 +101,11 @@ public enum Appariement {
             ePris.insert(c.e)
             icones.append(IconeBarre(fenetre: fen[c.f], element: elements[c.e], section: .visible))
         }
+        // Fenêtres sans élément : chaque barre (un écran = une barre) a sa copie de chaque icône, y compris des nôtres.
+        // Une copie qui recouvre une icône déjà retenue ou l'une de nos fenêtres n'est pas une icône de plus.
+        let nos = fenetres.filter { exclure.contains($0.numero) }.map(\.cadre)
         for (i, f) in fen.enumerated() where !fPris.contains(i) {
+            if nos.contains(where: { pareils(f.cadre, $0) }) || icones.contains(where: { pareils(f.cadre, $0.cadre) }) { continue }
             icones.append(IconeBarre(fenetre: f, element: nil, section: .visible))
         }
         // Éléments AX sans fenêtre : souvent des icônes hors de l'écran (masquées) que le WindowServer ne liste

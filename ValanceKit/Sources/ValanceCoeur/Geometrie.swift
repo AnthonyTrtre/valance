@@ -52,6 +52,12 @@ public struct Cadre: Codable, Equatable, Hashable, Sendable, CustomStringConvert
         return union > 0 ? inter.aire / union : 0
     }
 
+    /// Part du plus petit des deux cadres couverte par l'autre (0 à 1) : 1 quand l'un contient l'autre.
+    public func contenance(_ autre: Cadre) -> Double {
+        guard let inter = intersection(autre), min(aire, autre.aire) > 0 else { return 0 }
+        return inter.aire / min(aire, autre.aire)
+    }
+
     public func decale(dx: Double = 0, dy: Double = 0) -> Cadre {
         Cadre(x: x + dx, y: y + dy, largeur: largeur, hauteur: hauteur)
     }
