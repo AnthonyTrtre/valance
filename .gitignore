@@ -1,0 +1,12 @@
+*.xcodeproj
+.build/
+DerivedData/
+build/
+.DS_Store
+Socle/.build/
+ValanceKit/.build/
+ValanceKit/.swiftpm/
+*.xcworkspace/
+xcuserdata/
+graphify-out/
+*.profraw
