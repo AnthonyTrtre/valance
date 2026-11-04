@@ -71,8 +71,8 @@ struct VueGeneral: View {
     var body: some View {
         Form {
             Section {
-                Text("Valance masque les icônes placées à gauche de son séparateur (le trait fin à côté de la flèche). "
-                     + "Choisissez lesquelles dans Réglages → Icônes, ou ⌘-glissez-les vous-même de part et d'autre du séparateur.")
+                Text("Valance masque les icônes placées à gauche de sa flèche. Choisissez lesquelles dans Réglages → Icônes, "
+                     + "ou ⌘-glissez-les vous-même dans la barre : à gauche de la flèche, masquée ; à sa droite, visible.")
                     .foregroundStyle(.secondary)
                 if controleur.flecheCachee {
                     Label("La flèche de Valance est cachée sous l'encoche : trop d'icônes sont visibles sur cet écran. "
@@ -101,7 +101,6 @@ struct VueGeneral: View {
             }
             Section("Comportement") {
                 Toggle("Révéler au survol de la flèche", isOn: controleur.liaison(\.revelerAuSurvol))
-                Toggle("Afficher le séparateur quand les icônes sont révélées", isOn: controleur.liaison(\.afficherSeparateur))
                 Toggle("Retrouver le même état après un redémarrage", isOn: controleur.liaison(\.memoriserEtat))
             }
             Section("Espace disque") {
@@ -260,7 +259,7 @@ struct VueEcrans: View {
                 ForEach(controleur.diagnosticsEncoche, id: \.ecran) { d in
                     if d.aDesIconesCachees {
                         Label("\(d.sousEncoche.count) icône(s) passent derrière l'encoche : macOS ne les replie pas. "
-                              + "⌘-glissez-en quelques-unes à gauche du séparateur.", systemImage: "exclamationmark.triangle.fill")
+                              + "⌘-glissez-en quelques-unes à gauche de la flèche.", systemImage: "exclamationmark.triangle.fill")
                             .foregroundStyle(.orange)
                     } else {
                         Label("Aucune icône sous l'encoche.", systemImage: "checkmark.circle").foregroundStyle(.green)

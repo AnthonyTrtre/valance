@@ -29,16 +29,21 @@ final class BarreStatut: NSObject {
         separateur = barre.statusItem(withLength: LongueurSeparateur.visible)
         separateur.autosaveName = Self.nomSeparateur
         super.init()
-        for item in [fleche, separateur] {
-            item.button?.target = self
-            item.button?.action = #selector(clic(_:))
-            item.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        }
+        fleche.button?.target = self
+        fleche.button?.action = #selector(clic(_:))
+        fleche.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
         fleche.button?.setAccessibilityLabel("Valance")
-        separateur.button?.setAccessibilityLabel("Séparateur de Valance")
-        separateur.button?.toolTip = "Séparateur de Valance : ⌘-glissez à sa gauche les icônes à masquer."
-        separateur.button?.imagePosition = .imageOnly
+        preparerSeparateur()
         mettreAJourFleche(visibilite: .masquee, alerte: nil)
+    }
+
+    private func preparerSeparateur() {
+        separateur.button?.target = self
+        separateur.button?.action = #selector(clic(_:))
+        separateur.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        separateur.button?.setAccessibilityLabel("Séparateur de Valance")
+        separateur.button?.toolTip = "Séparateur de Valance : les icônes à gauche de la flèche sont masquées."
+        separateur.button?.imagePosition = .imageOnly
     }
 
     // MARK: - Section « toujours masquée »

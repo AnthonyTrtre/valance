@@ -134,7 +134,12 @@ final class Controleur {
             switch effet {
             case .appliquer(let v):
                 visibilite = v
-                appliquerLongueurs()
+                // La flèche est la frontière : une icône ⌘-glissée entre le séparateur et elle doit être masquée aussi.
+                if !v.estRevelee, rangementEnCours == nil, accessibiliteAccordee, iconesEntreSeparateurEtFleche() {
+                    masquerCellesDeGauche()
+                } else {
+                    appliquerLongueurs()
+                }
                 persistance.memoriser(v)
                 if v.estRevelee {
                     barreSecondaire.fermer()
@@ -176,10 +181,34 @@ final class Controleur {
             Journal.app.notice("Séparateur à droite de la flèche : masquage suspendu (flèche \(barre.cadreFleche.map { "\($0)" } ?? "?", privacy: .public), séparateur \(barre.cadreSeparateur.map { "\($0)" } ?? "?", privacy: .public))")
         }
         let l = Disposition.longueurs(pour: cible, sectionToujoursMasquee: reglages.sectionToujoursMasquee,
-                                      afficherSeparateur: reglages.afficherSeparateur || rangementEnCours != nil,
+                                      afficherSeparateur: rangementEnCours != nil,
                                       longueurMasquage: LongueurSeparateur.pourMasquer(largeursEcrans: largeurs))
-        barre.appliquer(l, visibilite: cible, afficherSeparateur: reglages.afficherSeparateur || rangementEnCours != nil)
+        barre.appliquer(l, visibilite: cible, afficherSeparateur: rangementEnCours != nil)
         barre.mettreAJourFleche(visibilite: visibilite, alerte: alerte)
+    }
+
+    /// Les icônes posées entre le séparateur et la flèche passent à gauche du séparateur (⌘-glisser, comme
+    /// Réglages → Icônes) ; le masquage s'applique à la fin du rangement.
+    private func masquerCellesDeGauche() {
+        let avant = dernierReleve
+        actualiserInventaire()
+        Task { @MainActor [weak self] in
+            for _ in 0..<30 where self?.dernierReleve == avant { try? await Task.sleep(for: .milliseconds(100)) }
+            guard let self, let barre = self.barre, let s = barre.cadreSeparateur.map(self.ref), let f = barre.cadreFleche.map(self.ref) else { return }
+            let entre = self.icones.filter { $0.element != nil && $0.cadre.milieuX > s.maxX && $0.cadre.milieuX < f.minX }
+            Journal.app.info("Icônes à gauche de la flèche à masquer : \(entre.count, privacy: .public)")
+            if entre.isEmpty { self.appliquerLongueurs() }
+            for i in entre { self.ranger(i, vers: .masquee) }
+        }
+    }
+
+    /// Une icône d'une autre app se trouve-t-elle entre notre séparateur et la flèche, sur la même barre ?
+    private func iconesEntreSeparateurEtFleche() -> Bool {
+        guard let barre, let s = barre.cadreSeparateur, let f = barre.cadreFleche, s.maxX <= f.minX + 1 else { return false }
+        let nos = barre.numerosFenetres
+        return FenetresMac.liste(niveau: FenetresMac.niveauBarre, aLEcranSeulement: false).contains { w in
+            !nos.contains(w.numero) && abs(w.cadre.minY - f.minY) < 6 && w.cadre.milieuX > s.maxX && w.cadre.milieuX < f.minX
+        }
     }
 
     /// Message d'alerte affiché sur la flèche (nil si tout va bien).

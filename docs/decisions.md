@@ -47,3 +47,12 @@ envoyait dans le panneau ce qui tenait dans la barre. Deux cadres désignent la 
 que l'un est presque entier dans l'autre (la fenêtre d'une icône système fait deux fois la largeur de son élément).
 Les captures du panneau se font en parallèle ; les icônes de macOS que ScreenCaptureKit ne capture pas reçoivent un
 symbole SF qui leur ressemble.
+
+## V9 — La flèche est la frontière (0.3.2)
+
+Le trait du séparateur ne s'affiche plus (seulement pendant un rangement). On ⌘-glisse directement dans la barre : à gauche
+de la flèche, masquée ; à droite, visible. Une icône posée entre le séparateur (invisible, collé à la flèche) et la flèche
+est ⌘-glissée par Valance à gauche du séparateur au moment de masquer, comme Réglages → Icônes. Recréer le séparateur à une
+position écrite à la main ne marche pas pendant que l'app tourne (AppKit efface la position au retrait). La révélation
+dans la barre reste jusqu'au clic suivant ; le panneau du dessous (quand les icônes ne tiennent pas, MacBook seul) se
+ferme seul dès que la souris quitte le panneau et la barre juste au-dessus.

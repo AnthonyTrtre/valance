@@ -17,6 +17,7 @@ struct Vignette: Identifiable {
 final class BarreSecondaire {
     private var panneau: NSPanel?
     private var moniteurClic: Any?
+    private var moniteursSouris: [Any] = []
     var surChoix: ((IconeBarre) -> Void)?
 
     var estOuverte: Bool { panneau?.isVisible ?? false }
@@ -54,6 +55,13 @@ final class BarreSecondaire {
         moniteurClic = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.fermer()
         }
+        // La souris quitte le panneau (et la barre juste au-dessus, d'où elle vient) : il se ferme seul.
+        let zone = cadre.insetBy(dx: -12, dy: 0).union(cadre.offsetBy(dx: 0, dy: 40).insetBy(dx: -12, dy: 0))
+        let surveiller: (NSEvent) -> Void = { [weak self] _ in
+            if !zone.contains(NSEvent.mouseLocation) { self?.fermer() }
+        }
+        moniteursSouris = [NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: surveiller) as Any,
+                           NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { surveiller($0); return $0 } as Any]
     }
 
     func fermer() {
@@ -61,6 +69,8 @@ final class BarreSecondaire {
             NSEvent.removeMonitor(m)
             moniteurClic = nil
         }
+        moniteursSouris.forEach { NSEvent.removeMonitor($0) }
+        moniteursSouris = []
         panneau?.orderOut(nil)
         panneau = nil
     }
