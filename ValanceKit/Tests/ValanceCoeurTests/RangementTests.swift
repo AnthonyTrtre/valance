@@ -31,6 +31,28 @@ struct RangementTests {
         #expect(!Rangement.estAtteignable(x: 1500, y: 300, ecrans: ecrans, hauteurEcranPrincipal: 1117, hauteurParDefaut: 24))  // sous la barre
     }
 
+    @Test func depotSousLEncoche() {
+        // MacBook seul : encoche de 764 à 949 pt (Quartz y 0 à 38). Séparateur à 946 : on vise le milieu de l'encoche.
+        let seul = [macbook]
+        let d = Rangement.depotSousEncoche(x: 945, y: 15, ecrans: seul, hauteurEcranPrincipal: 1117, hauteurParDefaut: 24)
+        #expect(d?.x == 856.5)
+        #expect(d?.y == 15)
+        // Séparateur plus à gauche que le milieu : on ne repasse pas à sa droite.
+        #expect(Rangement.depotSousEncoche(x: 800, y: 15, ecrans: seul, hauteurEcranPrincipal: 1117, hauteurParDefaut: 24)?.x == 800)
+        // Hors de l'encoche : rien à corriger.
+        #expect(Rangement.depotSousEncoche(x: 1000, y: 15, ecrans: seul, hauteurEcranPrincipal: 1117, hauteurParDefaut: 24) == nil)
+        #expect(Rangement.depotSousEncoche(x: -1241, y: -185, ecrans: [macbook, large], hauteurEcranPrincipal: 1117, hauteurParDefaut: 24) == nil)
+    }
+
+    @Test func flecheCachee() {
+        let seul = [macbook]
+        #expect(Rangement.flecheCachee(Cadre(x: 930, y: 4, largeur: 24, hauteur: 30), ecrans: seul, hauteurEcranPrincipal: 1117, hauteurParDefaut: 24))
+        #expect(!Rangement.flecheCachee(Cadre(x: 1061, y: 4, largeur: 24, hauteur: 30), ecrans: seul, hauteurEcranPrincipal: 1117, hauteurParDefaut: 24))
+        // Sur le grand écran, pas d'encoche : jamais cachée par elle.
+        #expect(!Rangement.flecheCachee(Cadre(x: -1224, y: -197, largeur: 24, hauteur: 24), ecrans: [macbook, large],
+                                        hauteurEcranPrincipal: 1117, hauteurParDefaut: 24))
+    }
+
     @Test func placeSurLeGrandEcran() {
         // Flèche à 1224 pt du bord droit, menus de l'app sur 500 pt : 3440 - 1224 - 500 - 24 = 1692 pt de libre.
         #expect(Rangement.tientDansLaBarre(largeurIcones: 600, distanceFlecheBordDroit: 1224, largeurMenusApp: 500, ecran: large))

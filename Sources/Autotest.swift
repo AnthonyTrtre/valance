@@ -7,6 +7,8 @@ import ValanceCoeur
 /// Les réglages sont alors gardés en mémoire (rien n'est écrit dans les préférences).
 @MainActor
 enum Autotest {
+    nonisolated static var actif: Bool { ProcessInfo.processInfo.environment["VALANCE_AUTOTEST"] == "1" }
+
     static func lancer(_ c: Controleur) {
         Task { @MainActor in
             var echecs: [String] = []

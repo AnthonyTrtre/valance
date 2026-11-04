@@ -17,6 +17,8 @@ final class Controleur {
     private(set) var diagnosticsEncoche: [DiagnosticEncoche] = []
     /// Le séparateur a été ⌘-glissé à droite de la flèche : on refuse de masquer.
     private(set) var ordreInvalide = false
+    /// La flèche est sous l'encoche (trop d'icônes visibles sur un écran à encoche) : on ne peut plus cliquer dessus.
+    private(set) var flecheCachee = false
     private(set) var raccourciRefuse: [RaccourcisGlobaux.Action] = []
     private(set) var ouvertureALaConnexion = false
     // Inventaire (Accessibilité)
@@ -171,7 +173,7 @@ final class Controleur {
         if !ordreOK && cible != .toutRevele {
             // On garde tout à l'écran tant que l'utilisateur n'a pas remis le séparateur à gauche de la flèche.
             cible = .toutRevele
-            Journal.app.notice("Séparateur à droite de la flèche : masquage suspendu")
+            Journal.app.notice("Séparateur à droite de la flèche : masquage suspendu (flèche \(barre.cadreFleche.map { "\($0)" } ?? "?", privacy: .public), séparateur \(barre.cadreSeparateur.map { "\($0)" } ?? "?", privacy: .public))")
         }
         let l = Disposition.longueurs(pour: cible, sectionToujoursMasquee: reglages.sectionToujoursMasquee,
                                       afficherSeparateur: reglages.afficherSeparateur || rangementEnCours != nil,
@@ -182,6 +184,7 @@ final class Controleur {
 
     /// Message d'alerte affiché sur la flèche (nil si tout va bien).
     var alerte: String? {
+        if flecheCachee { return "La flèche de Valance est sous l'encoche : trop d'icônes visibles. Passez-en en « Masquée » dans Réglages → Icônes." }
         if ordreInvalide { return "Le séparateur de Valance est à droite de la flèche : ⌘-glissez-le à sa gauche pour pouvoir masquer." }
         let n = diagnosticsEncoche.reduce(0) { $0 + $1.sousEncoche.count }
         if n > 0 { return "\(n) icône\(n > 1 ? "s passent" : " passe") sous l'encoche : masquez-en davantage." }
@@ -333,6 +336,12 @@ final class Controleur {
         diagnosticsEncoche = ecrans.compactMap {
             Analyse.encoche(ecran: $0, fenetres: fenetres, hauteurEcranPrincipal: h, hauteurParDefaut: EcransMac.hauteurBarreParDefaut)
         }
+        let cachee = barre?.cadreFleche.map {
+            Rangement.flecheCachee($0, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: EcransMac.hauteurBarreParDefaut)
+        } ?? false
+        // Seul moyen de le dire à l'utilisateur, puisque la flèche est invisible : ouvrir les réglages (une fois par épisode).
+        if cachee && !flecheCachee && rangementEnCours == nil && !Autotest.actif { ouvrirReglages() }
+        flecheCachee = cachee
         barre?.mettreAJourFleche(visibilite: visibilite, alerte: alerte)
     }
 
@@ -554,11 +563,15 @@ final class Controleur {
                 return "activez la section « toujours masquée » dans Réglages → Sections"
             }
             let depart = (x: e.milieuX, y: e.milieuY)
+            var arrivee = cible, sousEncocheAccepte = false
+            // MacBook seul : le point visé pour masquer tombe sous l'encoche, où macOS accepte quand même le dépôt.
+            if vers != .visible, let d = Rangement.depotSousEncoche(x: cible.x, y: cible.y, ecrans: ecrans, hauteurEcranPrincipal: h,
+                                                                   hauteurParDefaut: hb) { arrivee = d; sousEncocheAccepte = true }
             guard Rangement.estAtteignable(x: depart.x, y: depart.y, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb),
-                  Rangement.estAtteignable(x: cible.x, y: cible.y, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else {
+                  sousEncocheAccepte || Rangement.estAtteignable(x: arrivee.x, y: arrivee.y, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else {
                 return "l'icône ou la flèche n'est pas visible à l'écran (sous l'encoche ?) : utilisez un écran plus large"
             }
-            await Deplaceur.glisser(de: CGPoint(x: depart.x, y: depart.y), a: CGPoint(x: cible.x, y: cible.y))
+            await Deplaceur.glisser(de: CGPoint(x: depart.x, y: depart.y), a: CGPoint(x: arrivee.x, y: arrivee.y))
             try? await Task.sleep(for: .milliseconds(500))
         }
         return "l'icône n'a pas bougé (cette app refuse peut-être d'être déplacée)"

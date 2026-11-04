@@ -96,9 +96,10 @@ final class BarreStatut: NSObject {
 
     // MARK: - Positions
 
-    /// Cadre d'une de nos icônes en Quartz (nil si AppKit ne l'a pas encore placée).
+    /// Cadre d'une de nos icônes en Quartz (nil si AppKit ne l'a pas encore placée). Au lancement sur un MacBook seul,
+    /// macOS donne d'abord un cadre vide (hauteur 0, bas de l'écran) : position inconnue, pas une vraie place.
     func cadreQuartz(_ item: NSStatusItem) -> Cadre? {
-        guard let w = item.button?.window else { return nil }
+        guard let w = item.button?.window, w.frame.height >= 1 else { return nil }
         return Repere.versQuartz(Cadre(w.frame), hauteurEcranPrincipal: EcransMac.hauteurPrincipal)
     }
 
@@ -107,7 +108,7 @@ final class BarreStatut: NSObject {
     var cadreToujoursMasque: Cadre? { toujoursMasque.flatMap { cadreQuartz($0) } }
 
     /// Cadre de la flèche en Cocoa (pour le survol et la barre secondaire).
-    var cadreFlecheCocoa: Cadre? { fleche.button?.window.map { Cadre($0.frame) } }
+    var cadreFlecheCocoa: Cadre? { fleche.button?.window.flatMap { $0.frame.height >= 1 ? Cadre($0.frame) : nil } }
     var ecranFleche: NSScreen? { fleche.button?.window?.screen }
 
     /// Numéros de nos propres fenêtres, à exclure de l'inventaire.

@@ -45,6 +45,28 @@ public enum Rangement {
         return false
     }
 
+    /// Point de dépôt de repli quand celui visé pour masquer tombe sous une encoche (MacBook seul) : macOS accepte
+    /// un dépôt sous l'encoche, on vise donc son milieu (sans dépasser le point d'origine vers la droite). Un dépôt
+    /// tout contre le séparateur fait sauter l'icône voisine de l'autre côté. nil si le point n'est pas sous une encoche.
+    public static func depotSousEncoche(x: Double, y: Double, ecrans: [EcranDecrit], hauteurEcranPrincipal h: Double,
+                                        hauteurParDefaut: Double) -> (x: Double, y: Double)? {
+        for e in ecrans {
+            guard let n = e.encoche(hauteurParDefaut: hauteurParDefaut) else { continue }
+            let q = Repere.versQuartz(n, hauteurEcranPrincipal: h)
+            if x >= q.minX, x < q.maxX, y >= q.minY, y < q.maxY { return (min(x, q.milieuX), y) }
+        }
+        return nil
+    }
+
+    /// Vrai si la flèche (Quartz) est sous l'encoche, ou à sa gauche, sur l'écran dont la barre la porte : elle est
+    /// alors invisible et l'utilisateur ne peut plus rien révéler d'un clic.
+    public static func flecheCachee(_ f: Cadre, ecrans: [EcranDecrit], hauteurEcranPrincipal h: Double,
+                                    hauteurParDefaut: Double) -> Bool {
+        guard let e = Ecrans.ecranDeLaBarre(f, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hauteurParDefaut),
+              let n = e.encoche(hauteurParDefaut: hauteurParDefaut) else { return false }
+        return f.minX < Repere.versQuartz(n, hauteurEcranPrincipal: h).maxX - Analyse.tolerance
+    }
+
     /// Les icônes masquées (largeur totale `largeurIcones`) tiennent-elles à gauche de la flèche sur `ecran` ?
     /// Toutes les barres sont calées à droite et les menus de l'app à gauche : on passe donc d'un écran à l'autre
     /// par la distance de la flèche au bord droit et la largeur des menus de l'app au premier plan. Sur un écran à

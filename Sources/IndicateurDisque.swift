@@ -22,8 +22,7 @@ final class IndicateurDisque: NSObject, NSMenuDelegate {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.autosaveName = Self.nom
         super.init()
-        item.button?.image = NSImage(systemSymbolName: "internaldrive", accessibilityDescription: "Espace disque")
-        item.button?.imagePosition = .imageLeading
+        // Texte seul : sur un MacBook à encoche, chaque point de barre compte.
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
@@ -42,8 +41,8 @@ final class IndicateurDisque: NSObject, NSMenuDelegate {
     }
 
     func actualiser() {
-        guard let v = Self.volumes().first else { item.button?.title = " —"; return }
-        let titre = " " + FormatDisque.court(v.libre)
+        guard let v = Self.volumes().first else { item.button?.title = "—"; return }
+        let titre = FormatDisque.court(v.libre)
         item.button?.attributedTitle = NSAttributedString(string: titre, attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize - 1, weight: .regular),
             .foregroundColor: v.estPresquePlein ? NSColor.systemOrange : NSColor.labelColor,

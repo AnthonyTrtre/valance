@@ -29,3 +29,11 @@ Besoin : choisir les icônes dans les réglages. Un changement de section dans R
 (`CGEvent`, Accessibilité) juste à droite de la flèche ou juste à gauche d'un séparateur, barre tout révélée, puis remet le
 curseur et vérifie (deux nouveaux essais au plus). Jamais en tâche de fond. Positions ramenées sur la barre du plus large
 écran avant toute comparaison (l'Accessibilité situe chaque app sur l'écran de son choix) ; on glisse sur cette barre-là.
+
+## V7 — Écran à encoche seul : dépôt sous l'encoche, flèche cachée signalée
+Sur un MacBook sans autre écran, le point visé pour masquer (juste à gauche du séparateur) tombe souvent sous l'encoche.
+macOS y accepte pourtant le dépôt : on vise alors le milieu de l'encoche (jamais à droite du point d'origine), loin du
+séparateur, car un dépôt tout contre lui fait sauter l'icône voisine de l'autre côté. Ramener une icône en Visible reste
+impossible depuis l'encoche (on ne peut pas la saisir). Si la flèche passe sous l'encoche (trop d'icônes visibles), elle
+est invisible : Valance ouvre ses réglages avec un avertissement, une fois par épisode. Un cadre de fenêtre vide (hauteur 0,
+donné par macOS au lancement) vaut « position inconnue », sinon l'ordre paraissait faux et le masquage restait suspendu.

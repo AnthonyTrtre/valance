@@ -74,6 +74,12 @@ struct VueGeneral: View {
                 Text("Valance masque les icônes placées à gauche de son séparateur (le trait fin à côté de la flèche). "
                      + "Choisissez lesquelles dans Réglages → Icônes, ou ⌘-glissez-les vous-même de part et d'autre du séparateur.")
                     .foregroundStyle(.secondary)
+                if controleur.flecheCachee {
+                    Label("La flèche de Valance est cachée sous l'encoche : trop d'icônes sont visibles sur cet écran. "
+                          + "Passez-en en « Masquée » dans la rubrique Icônes (le raccourci ⌃⌥⌘V marche toujours).",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                }
                 if controleur.ordreInvalide {
                     Label("Le séparateur est à droite de la flèche : ⌘-glissez-le à sa gauche, sinon Valance ne peut pas masquer.",
                           systemImage: "exclamationmark.triangle.fill")
