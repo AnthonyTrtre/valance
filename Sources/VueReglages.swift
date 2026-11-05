@@ -63,6 +63,28 @@ struct VueReglages: View {
     }
 }
 
+// MARK: - Astuce ⌘-glisser
+
+/// Le plus simple pour ranger et ordonner : macOS le fait déjà, ⌘ enfoncé, directement dans la barre.
+struct AstuceCommande: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "command")
+                .font(.system(size: 30, weight: .semibold))
+                .foregroundStyle(.tint)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Tenez ⌘ et glissez les icônes dans la barre").font(.title3.bold())
+                Text("C'est le plus simple pour changer l'ordre et la zone. À droite de la flèche ‹ : toujours visible. "
+                     + "Entre l'œil barré et la flèche : visible au clic. À gauche de l'œil barré : toujours caché. "
+                     + "Cliquez d'abord sur la flèche pour faire apparaître les icônes masquées.")
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+}
+
 // MARK: - Général
 
 struct VueGeneral: View {
@@ -70,6 +92,7 @@ struct VueGeneral: View {
 
     var body: some View {
         Form {
+            Section { AstuceCommande() }
             Section {
                 Text("Valance masque les icônes placées à gauche de sa flèche. Choisissez lesquelles dans Réglages → Icônes, "
                      + "ou ⌘-glissez-les vous-même dans la barre : à gauche de la flèche, masquée ; à sa droite, visible.")
@@ -287,6 +310,7 @@ struct VueInventaire: View {
 
     var body: some View {
         Form {
+            Section { AstuceCommande() }
             Section {
                 Toggle("Identifier et ranger les icônes (Accessibilité)", isOn: Binding(
                     get: { MainActor.assumeIsolated { controleur.reglages.inventaireActive } },
@@ -302,8 +326,7 @@ struct VueInventaire: View {
                     }
                 }
             } footer: {
-                Text("Choisissez la section de chaque icône, et clic droit sur une ligne pour changer "
-                     + "l'ordre, de gauche à droite dans la barre : Valance ⌘-glisse lui-même l'icône à sa place (le curseur bouge un "
+                Text("Ou choisissez ici la zone de chaque icône : Valance la ⌘-glisse lui-même à sa place (le curseur bouge un "
                      + "instant, puis revient). macOS retient ensuite cette place. L'Accessibilité sert à savoir quelle icône est "
                      + "laquelle et à la déplacer.")
             }
@@ -330,28 +353,10 @@ struct VueInventaire: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-                Section {
-                    VueOrdre(controleur: controleur)
-                } header: {
-                    Text("Ordre dans la barre")
-                } footer: {
-                    Text("Faites glisser une icône : les autres s'écartent, et la barre se met à jour quand vous lâchez. "
-                         + "De l'autre côté de la flèche ou de l'œil barré, elle change aussi de zone.")
-                }
                 ForEach(sections, id: \.self) { section in
                     let liste = controleur.icones.filter { $0.section == section && $0.element != nil && !$0.estFixe }
                     Section("\(section.libelleZone) (\(liste.count))") {
-                        ForEach(liste) { i in
-                            LigneIcone(controleur: controleur, icone: i, sections: sections)
-                                .contextMenu {
-                                    if let n = liste.firstIndex(where: { $0.id == i.id }) {
-                                        Button("Déplacer à gauche") { controleur.ordonner(i, pres: liste[n - 1], apres: false) }
-                                            .disabled(n == 0)
-                                        Button("Déplacer à droite") { controleur.ordonner(i, pres: liste[n + 1], apres: true) }
-                                            .disabled(n == liste.count - 1)
-                                    }
-                                }
-                        }
+                        ForEach(liste) { i in LigneIcone(controleur: controleur, icone: i, sections: sections) }
                     }
                 }
             }

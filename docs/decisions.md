@@ -106,10 +106,8 @@ le relevé a plus de 2 minutes. `get_usage` est marquée expérimentale par Clau
 écran inactif le panneau passait sous la barre ou ne s'affichait pas. Le niveau est maintenant réglé après. À savoir : sur
 un écran inactif, macOS garde le premier clic dans la barre pour activer cet écran ; seul le second atteint la flèche.
 
-## V16 — Changer l'ordre depuis une bande glissable (0.4.2)
+## V16 — Pas d'outil d'ordre : ⌘-glisser dans la barre, mis en avant (0.4.3)
 
-En tête de Réglages → Icônes, une bande reproduit la barre : les icônes s'écartent en direct pendant le glisser, et ce
-n'est qu'au lâcher que Valance ⌘-glisse l'icône contre le bord de sa voisine (zone comprise de part et d'autre des repères).
-Vers la droite, macOS 26 ignore un ⌘-glisser simulé rapide : ce sens-là dure ~1,5 s ; vers la gauche, il reste rapide. Une
-icône masquée lue hors de l'écran juste après la révélation est relue au lieu de conclure à un écran trop étroit.
-
+La 0.4.2 ajoutait une bande glissable dans les réglages, qui ⌘-glissait elle-même les icônes. Elle doublait ce que
+macOS fait déjà, ⌘ enfoncé, directement dans la barre, et en plus lentement. La 0.4.3 la retire avec le clic droit
+« Déplacer » ; un encart en tête de Général et d'Icônes explique le ⌘-glisser.

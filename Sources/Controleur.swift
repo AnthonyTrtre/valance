@@ -58,7 +58,7 @@ final class Controleur {
     @ObservationIgnored private var disjoncteur = Disjoncteur()
     @ObservationIgnored private var detecteur = DetecteurChangements()
     @ObservationIgnored private var cacheImages: [String: ImageCapturee] = [:]
-    @ObservationIgnored private var fileRangement: [(cle: String, vers: ValanceCoeur.Section, voisine: (cle: String, apres: Bool)?)] = []
+    @ObservationIgnored private var fileRangement: [(cle: String, vers: ValanceCoeur.Section)] = []
 
     init(magasin: any MagasinCleValeur = MagasinDefaults()) {
         persistance = Persistance(magasin: magasin)
@@ -630,16 +630,6 @@ final class Controleur {
         }
     }
 
-    /// Images des icônes rangeables pour la bande des réglages : symbole système ou icône de l'app (les captures de
-    /// la barre, claires et minuscules, s'y lisent mal).
-    func apercus() -> [String: NSImage] {
-        var r: [String: NSImage] = [:]
-        for i in icones where i.element != nil && !i.estFixe {
-            r[i.cle] = Self.symboleSysteme(i.element) ?? i.element.flatMap { NSRunningApplication(processIdentifier: $0.pid)?.icon }
-        }
-        return r
-    }
-
     /// Icônes de macOS (Centre de contrôle, SystemUIServer) que ScreenCaptureKit ne capture pas : un symbole qui
     /// leur ressemble plutôt que l'icône du Centre de contrôle pour toutes.
     private static func symboleSysteme(_ e: ElementAccessible?) -> NSImage? {
@@ -706,16 +696,7 @@ final class Controleur {
         rafraichirAutorisations()
         guard accessibiliteAccordee else { demanderAccessibilite(); return }
         fileRangement.removeAll { $0.cle == icone.cle }
-        fileRangement.append((icone.cle, section, nil))
-        if rangementEnCours == nil { rangerSuivante() }
-    }
-
-    /// Change l'ordre : met l'icône juste avant (à gauche de) ou juste après `voisine`, dans la section de celle-ci.
-    func ordonner(_ icone: IconeBarre, pres voisine: IconeBarre, apres: Bool) {
-        rafraichirAutorisations()
-        guard accessibiliteAccordee else { demanderAccessibilite(); return }
-        fileRangement.removeAll { $0.cle == icone.cle }
-        fileRangement.append((icone.cle, voisine.section, (voisine.cle, apres)))
+        fileRangement.append((icone.cle, section))
         if rangementEnCours == nil { rangerSuivante() }
     }
 
@@ -731,7 +712,7 @@ final class Controleur {
             }
             return
         }
-        let (cle, vers, voisine) = fileRangement.removeFirst()
+        let (cle, vers) = fileRangement.removeFirst()
         rangementEnCours = cle
         messageRangement = nil
         barreSecondaire.fermer()
@@ -739,14 +720,6 @@ final class Controleur {
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(450))
             guard let self else { return }
-            if let voisine {
-                let erreur = await self.placer(cle: cle, pres: voisine)
-                self.messageRangement = erreur == Self.attenteEcran
-                    ? "icône sous l'encoche, changez l'ordre avec un écran plus large branché" : erreur
-                if let erreur { Journal.app.error("Ordre de \(cle, privacy: .public) : \(erreur, privacy: .public)") }
-                self.rangerSuivante()
-                return
-            }
             let erreur = await self.deplacer(cle: cle, vers: vers)
             if erreur == Self.attenteEcran {
                 self.enAttente[cle] = vers
@@ -786,33 +759,6 @@ final class Controleur {
             await Deplaceur.glisser(de: CGPoint(x: depart.x, y: depart.y), a: CGPoint(x: arrivee.x, y: arrivee.y))
             try? await Task.sleep(for: .milliseconds(500))
         }
-        return "l'icône n'a pas bougé (cette app refuse peut-être d'être déplacée)"
-    }
-
-    /// Glisse l'icône contre sa voisine, du côté voulu ; nil quand elle y est.
-    private func placer(cle: String, pres v: (cle: String, apres: Bool)) async -> String? {
-        let h = EcransMac.hauteurPrincipal, hb = EcransMac.hauteurBarreParDefaut
-        var hors = false
-        for _ in 0..<4 {
-            guard let lu = await relire(cle), let lv = await relire(v.cle) else { return "icône introuvable (l'app a-t-elle quitté ?)" }
-            let t = ref(lu.cadre), w = ref(lv.cadre)
-            let ecart = v.apres ? t.minX - w.maxX : w.minX - t.maxX
-            if ecart > -2 && ecart < 30 { return nil }   // ~16 pt entre deux icônes voisines ; une de plus en ferait 48
-            let arrivee = Rangement.pointPourOrdre(voisine: w, apres: v.apres)
-            // Juste après la révélation, une icône masquée peut encore être lue hors de l'écran : on relit.
-            guard Rangement.estAtteignable(x: t.milieuX, y: t.milieuY, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb),
-                  Rangement.estAtteignable(x: arrivee.x, y: arrivee.y, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else {
-                Journal.app.info("Ordre de \(cle, privacy: .public) : \(Int(t.minX)) → \(Int(arrivee.x)) hors d'atteinte, on relit")
-                hors = true
-                try? await Task.sleep(for: .milliseconds(500))
-                continue
-            }
-            hors = false
-            await Deplaceur.glisser(de: CGPoint(x: t.milieuX, y: t.milieuY), a: CGPoint(x: arrivee.x, y: arrivee.y),
-                                    lent: arrivee.x > t.milieuX)
-            try? await Task.sleep(for: .milliseconds(300))
-        }
-        if hors { return Self.attenteEcran }
         return "l'icône n'a pas bougé (cette app refuse peut-être d'être déplacée)"
     }
 

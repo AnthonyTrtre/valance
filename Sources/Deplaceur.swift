@@ -6,7 +6,7 @@ import CoreGraphics
 /// de fond.
 @MainActor
 enum Deplaceur {
-    static func glisser(de depart: CGPoint, a arrivee: CGPoint, lent: Bool = false) async {
+    static func glisser(de depart: CGPoint, a arrivee: CGPoint) async {
         let origine = CGEvent(source: nil)?.location ?? depart
         let source = CGEventSource(stateID: .hidSystemState)
         func poster(_ type: CGEventType, _ p: CGPoint, commande: Bool) {
@@ -18,16 +18,14 @@ enum Deplaceur {
         await pause(40)
         poster(.leftMouseDown, depart, commande: true)
         await pause(150)   // macOS « décroche » l'icône
-        // `lent` : pour remonter d'une ou deux places vers la droite, macOS 26 ignore un glisser rapide (14 pas,
-        // 0,2 s) ; 1 s de glisser et une demi-seconde avant de lâcher passent (vérifié le 05/11/2026).
-        let pas = lent ? 50 : 14
+        let pas = 14
         for i in 1...pas {
             let t = Double(i) / Double(pas)
             poster(.leftMouseDragged, CGPoint(x: depart.x + (arrivee.x - depart.x) * t, y: depart.y + (arrivee.y - depart.y) * t),
                    commande: true)
-            await pause(lent ? 20 : 16)
+            await pause(16)
         }
-        await pause(lent ? 500 : 120)
+        await pause(120)
         poster(.leftMouseUp, arrivee, commande: true)
         await pause(60)
         CGWarpMouseCursorPosition(origine)
