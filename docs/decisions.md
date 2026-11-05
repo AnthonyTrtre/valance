@@ -90,3 +90,12 @@ Le choix dépend de la largeur des icônes masquées, tirée du dernier relevé.
 révélation : sur un écran étroit, les icônes qui débordent ont alors des positions fausses et passaient pour visibles
 (13 masquées, puis 1, puis 13 ; 42 pt puis 4 026 pt). Plus de relevé pendant une révélation, sauf celui qui suit un
 rangement ; il est refait après le masquage. La lecture des menus de l'app au premier plan a sa file, comme les menus.
+
+## V14 — Pourcentage restant de Claude dans la barre (0.4.0)
+
+L'app Claude garde sa connexion pour elle, et lire un jeton à la main (trousseau, puis `api/oauth/usage`) obligerait à
+le renouveler, au risque de déconnecter Claude Code. Valance lance donc Claude Code en mode SDK (`claude -p
+--input-format stream-json`), envoie `initialize` puis `get_usage` et lit `rate_limits.seven_day.utilization` : aucun
+message au modèle, aucun jeton manipulé, Claude Code gère sa connexion. Toutes les 10 minutes, et à l'ouverture du menu si
+le relevé a plus de 2 minutes. `get_usage` est marquée expérimentale par Claude Code : si elle change, l'icône affiche
+« — » avec la raison dans son menu. Option désactivée par défaut ; Claude Code doit être connecté (`claude auth login`).

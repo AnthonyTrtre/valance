@@ -45,6 +45,7 @@ final class Controleur {
     @ObservationIgnored private let persistance: Persistance
     @ObservationIgnored private var barre: BarreStatut?
     @ObservationIgnored private var disque: IndicateurDisque?
+    @ObservationIgnored private var claude: IndicateurClaude?
     @ObservationIgnored private var relaisMenu: RelaisMenu?
     @ObservationIgnored private let raccourcis = RaccourcisGlobaux()
     @ObservationIgnored private let barreSecondaire = BarreSecondaire()
@@ -92,6 +93,16 @@ final class Controleur {
         observerSysteme()
         if reglages.inventaireActive { lancerInventairePeriodique() }
         afficherDisque(reglages.afficherDisque)
+        afficherClaude(reglages.afficherClaude)
+    }
+
+    private func afficherClaude(_ oui: Bool) {
+        if oui, claude == nil {
+            claude = IndicateurClaude()
+            claude?.surReglages = { [weak self] in self?.ouvrirReglages() }
+        } else {
+            claude?.visible = oui
+        }
     }
 
     private func afficherDisque(_ oui: Bool) {
@@ -114,6 +125,8 @@ final class Controleur {
         }
         observateurs.removeAll()
         raccourcis.toutRetirer()
+        claude?.retirer()
+        claude = nil
         disque?.retirer()
         disque = nil
         barreSecondaire.fermer()
@@ -255,6 +268,7 @@ final class Controleur {
         }
         if r.revelerAuSurvol != ancien.revelerAuSurvol { configurerSurvol() }
         if r.afficherDisque != ancien.afficherDisque { afficherDisque(r.afficherDisque) }
+        if r.afficherClaude != ancien.afficherClaude { afficherClaude(r.afficherClaude) }
         if r.inventaireActive != ancien.inventaireActive {
             if r.inventaireActive { lancerInventairePeriodique() } else { arreterInventaire() }
         }
@@ -564,6 +578,7 @@ final class Controleur {
         placeLiberee = oui
         barre?.reduireFleche(oui)
         if reglages.afficherDisque { disque?.visible = !oui }
+        if reglages.afficherClaude { claude?.visible = !oui }
         if !oui, let m = moniteurRetour { NSEvent.removeMonitor(m); moniteurRetour = nil }
     }
 

@@ -13,6 +13,8 @@ public struct Reglages: Codable, Equatable, Sendable {
     public var sectionToujoursMasquee = true
     // Indicateurs
     public var afficherDisque = true
+    /// Pourcentage restant de la limite hebdomadaire de Claude (lu par Claude Code, s'il est connecté).
+    public var afficherClaude = false
     // Raccourcis
     public var raccourci: Raccourci? = .parDefaut
     public var raccourciToutReveler: Raccourci?
@@ -43,7 +45,7 @@ public struct Reglages: Codable, Equatable, Sendable {
     private enum Cles: String, CodingKey {
         case repliAutomatique, delaiRepli, memoriserEtat, afficherSeparateur, revelerAuSurvol, sectionToujoursMasquee
         case raccourci, raccourciToutReveler, inventaireActive, modeAffichage, signalerChangements, dureeSignalement
-        case regles, afficherDisque
+        case regles, afficherDisque, afficherClaude
     }
 
     public init(from decoder: any Decoder) throws {
@@ -64,6 +66,7 @@ public struct Reglages: Codable, Equatable, Sendable {
         dureeSignalement = try c.decodeIfPresent(Double.self, forKey: .dureeSignalement) ?? d.dureeSignalement
         regles = try c.decodeIfPresent([String: RegleApp].self, forKey: .regles) ?? d.regles
         afficherDisque = try c.decodeIfPresent(Bool.self, forKey: .afficherDisque) ?? d.afficherDisque
+        afficherClaude = try c.decodeIfPresent(Bool.self, forKey: .afficherClaude) ?? d.afficherClaude
     }
 
     public func encode(to encoder: any Encoder) throws {
@@ -82,6 +85,7 @@ public struct Reglages: Codable, Equatable, Sendable {
         try c.encode(dureeSignalement, forKey: .dureeSignalement)
         try c.encode(regles, forKey: .regles)
         try c.encode(afficherDisque, forKey: .afficherDisque)
+        try c.encode(afficherClaude, forKey: .afficherClaude)
     }
 }
 

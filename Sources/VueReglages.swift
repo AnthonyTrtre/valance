@@ -109,6 +109,13 @@ struct VueGeneral: View {
                      + "Cliquez dessus pour voir tous les disques.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Utilisation de Claude") {
+                Toggle("Afficher le % restant de la semaine dans la barre", isOn: controleur.liaison(\.afficherClaude))
+                Text("Valance le demande à Claude Code toutes les 10 minutes, sans message au modèle ni jeton manipulé : "
+                     + "Claude Code doit être installé et connecté (« claude auth login » dans le Terminal). C'est lui qui "
+                     + "contacte Anthropic. Orange sous 20 % restants.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Démarrage") {
                 Toggle("Ouvrir Valance à la connexion", isOn: Binding(
                     get: { MainActor.assumeIsolated { controleur.ouvertureALaConnexion } },
@@ -431,8 +438,9 @@ struct VueAPropos: View {
             Section {
                 LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?")
                 LabeledContent("Identifiant", value: Bundle.main.bundleIdentifier ?? "?")
-                Text("Gestionnaire de barre des menus pour macOS 26. Aucune télémétrie. Seul accès réseau : la recherche "
-                     + "de mises à jour sur GitHub (toutes les 6 h). Logiciel libre, licence MIT.")
+                Text("Gestionnaire de barre des menus pour macOS 26. Aucune télémétrie. Accès réseau : la recherche de mises "
+                     + "à jour sur GitHub (toutes les 6 h) ; si l'option est activée, Claude Code interroge Anthropic pour "
+                     + "l'utilisation de Claude (toutes les 10 min). Logiciel libre, licence MIT.")
                     .foregroundStyle(.secondary)
                 Button("Rechercher des mises à jour…") { NSApp.activate(); miseAJour.checkForUpdates(nil) }
             }

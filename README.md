@@ -2,7 +2,11 @@
 
 Gestionnaire de la barre des menus de macOS 26 : masque les icônes encombrantes derrière un séparateur, les révèle d'un clic
 sur la flèche ou d'un raccourci, les replie seul.
-Affiche aussi la place libre du disque. Gratuit, licence MIT. Aucune autorisation pour l'essentiel, aucune télémétrie ; seul accès réseau : la recherche de mises à jour (Sparkle, depuis les Releases de ce dépôt).
+Affiche aussi la place libre du disque et, si vous le voulez, le pourcentage restant de votre limite hebdomadaire
+Claude. Gratuit, licence MIT. Aucune autorisation pour l'essentiel, aucune télémétrie. Accès réseau : la recherche de
+mises à jour (Sparkle, depuis les Releases de ce dépôt) ; et, seulement si l'option Claude est activée, Claude Code
+(qui doit être installé et connecté) interroge Anthropic pour Valance toutes les 10 minutes, avec sa propre
+connexion : Valance ne lit aucun jeton et n'envoie aucun message au modèle.
 
 ## Installer
 
