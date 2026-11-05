@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo/logo.svg" width="160" alt="Icône de Valance"></p>
+
 # Valance
 
 Gestionnaire de la barre des menus de macOS 26 : masque les icônes encombrantes derrière un séparateur, les révèle d'un clic
