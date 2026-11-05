@@ -83,3 +83,10 @@ le vrai menu. Ces appels ont leur propre file : derrière un relevé de plusieur
 ne répondent qu'à un vrai clic (Electron : Plaud ; fenêtres surgissantes) sont révélées puis cliquées ; si l'icône
 tombe sous l'encoche, Valance réduit à rien sa flèche et l'espace disque le temps du clic (ils reviennent au clic
 suivant), car macOS refuse d'y déposer une autre icône. Sinon, l'app elle-même est ouverte.
+
+## V13 — Barre ou panneau : un choix stable (0.3.6)
+
+Le choix dépend de la largeur des icônes masquées, tirée du dernier relevé. Ce relevé se faisait aussi 0,4 s après une
+révélation : sur un écran étroit, les icônes qui débordent ont alors des positions fausses et passaient pour visibles
+(13 masquées, puis 1, puis 13 ; 42 pt puis 4 026 pt). Plus de relevé pendant une révélation, sauf celui qui suit un
+rangement ; il est refait après le masquage. La lecture des menus de l'app au premier plan a sa file, comme les menus.

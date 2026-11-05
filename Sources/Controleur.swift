@@ -151,6 +151,10 @@ final class Controleur {
                     appliquerLongueurs()
                 }
                 persistance.memoriser(v)
+                if !v.estRevelee, reglages.inventaireActive {
+                    // Relevé manqué pendant la révélation : refait une fois les icônes masquées.
+                    differer(0.8) { [weak self] in self?.actualiserInventaire() }
+                }
                 if v.estRevelee {
                     barreSecondaire.fermer()
                     // Les icônes révélées sont à leur place une fraction de seconde plus tard.
@@ -446,6 +450,9 @@ final class Controleur {
     func actualiserInventaire() {
         rafraichirAutorisations()
         guard reglages.inventaireActive, accessibiliteAccordee, !releveEnCours, let barre else { return }
+        // Icônes révélées : sur un écran étroit, celles qui débordent ont des positions fausses et passeraient pour
+        // visibles (le choix barre / panneau en dépend). On relit une fois masqué ; un rangement, lui, relit exprès.
+        if visibilite.estRevelee && rangementEnCours == nil && !releveApresRangement { return }
         // Au lancement, macOS ne donne pas tout de suite la place de nos icônes : sans elle, tout paraîtrait visible.
         guard barre.cadreSeparateur != nil, barre.cadreFleche != nil else {
             differer(1) { [weak self] in self?.actualiserInventaire() }
@@ -549,6 +556,7 @@ final class Controleur {
     }
 
     @ObservationIgnored private var placeLiberee = false
+    @ObservationIgnored private var releveApresRangement = false
     @ObservationIgnored private var moniteurRetour: Any?
 
     private func liberer(_ oui: Bool) {
@@ -656,12 +664,14 @@ final class Controleur {
         guard let ici = Ecrans.ecran(contenant: Double(souris.x), Double(souris.y), parmi: ecrans), let ref = ecranQuartz(f) else { return true }
         var largeurMenus = 0.0
         if let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
-           let m = await avecEcheance(0.5, file: fileAccessibilite, { @Sendable in LecteurAccessibilite.finMenus(pid: pid) }) ?? nil,
+           let m = await avecEcheance(0.5, file: fileMenus, { @Sendable in LecteurAccessibilite.finMenus(pid: pid) }) ?? nil,
            let e = ecranQuartz(m) {
             largeurMenus = m.maxX - Repere.versQuartz(e.cadre, hauteurEcranPrincipal: h).minX
         }
         let distance = Repere.versQuartz(ref.cadre, hauteurEcranPrincipal: h).maxX - f.minX
-        return Rangement.tientDansLaBarre(largeurIcones: largeur, distanceFlecheBordDroit: distance, largeurMenusApp: largeurMenus, ecran: ici)
+        let tient = Rangement.tientDansLaBarre(largeurIcones: largeur, distanceFlecheBordDroit: distance, largeurMenusApp: largeurMenus, ecran: ici)
+        Journal.app.info("Place : écran \(ici.nom, privacy: .public) (\(Int(ici.cadre.largeur))), icônes masquées \(Int(largeur)) pt sur \(self.icones.filter { $0.section == .masquee }.count), flèche à \(Int(distance)) du bord, menus \(Int(largeurMenus)) → \(tient ? "barre" : "panneau", privacy: .public)")
+        return tient
     }
 
     // MARK: - Rangement (V6)
@@ -680,7 +690,11 @@ final class Controleur {
             rangementEnCours = nil
             appliquerLongueurs()
             // Relu une fois les icônes revenues à leur place, sinon elles paraissent toutes visibles.
-            differer(0.8) { [weak self] in self?.actualiserInventaire() }
+            differer(0.8) { [weak self] in
+                self?.releveApresRangement = true
+                self?.actualiserInventaire()
+                self?.releveApresRangement = false
+            }
             return
         }
         let (cle, vers) = fileRangement.removeFirst()
