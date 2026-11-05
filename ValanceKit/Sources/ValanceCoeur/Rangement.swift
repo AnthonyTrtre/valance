@@ -32,6 +32,12 @@ public enum Rangement {
         }
     }
 
+    /// Point (Quartz) où lâcher une icône pour la mettre juste avant (à gauche de) ou juste après `voisine`, cadre
+    /// relevé barre tout révélée : contre son bord, comme pour les séparateurs (vérifié sur macOS 26 dans les deux sens).
+    public static func pointPourOrdre(voisine: Cadre, apres: Bool) -> (x: Double, y: Double) {
+        (apres ? voisine.maxX + 1 : voisine.minX - 1, voisine.milieuY)
+    }
+
     /// Vrai si le point (Quartz) est dans la barre des menus d'un écran, hors de l'encoche : un clic simulé y atteint
     /// bien une icône.
     public static func estAtteignable(x: Double, y: Double, ecrans: [EcranDecrit], hauteurEcranPrincipal h: Double,

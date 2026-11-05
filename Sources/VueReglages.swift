@@ -302,7 +302,8 @@ struct VueInventaire: View {
                     }
                 }
             } footer: {
-                Text("Choisissez la section de chaque icône : Valance la ⌘-glisse lui-même à sa place (le curseur bouge un "
+                Text("Choisissez la section de chaque icône, et glissez la poignée ≡ d'une ligne (ou clic droit) pour changer "
+                     + "l'ordre, de gauche à droite dans la barre : Valance ⌘-glisse lui-même l'icône à sa place (le curseur bouge un "
                      + "instant, puis revient). macOS retient ensuite cette place. L'Accessibilité sert à savoir quelle icône est "
                      + "laquelle et à la déplacer.")
             }
@@ -332,7 +333,26 @@ struct VueInventaire: View {
                 ForEach(sections, id: \.self) { section in
                     let liste = controleur.icones.filter { $0.section == section && $0.element != nil && !$0.estFixe }
                     Section("\(section.libelleZone) (\(liste.count))") {
-                        ForEach(liste) { i in LigneIcone(controleur: controleur, icone: i, sections: sections) }
+                        ForEach(liste) { i in
+                            LigneIcone(controleur: controleur, icone: i, sections: sections)
+                                .contextMenu {
+                                    if let n = liste.firstIndex(where: { $0.id == i.id }) {
+                                        Button("Déplacer à gauche") { controleur.ordonner(i, pres: liste[n - 1], apres: false) }
+                                            .disabled(n == 0)
+                                        Button("Déplacer à droite") { controleur.ordonner(i, pres: liste[n + 1], apres: true) }
+                                            .disabled(n == liste.count - 1)
+                                    }
+                                }
+                                // Poignée lâchée sur une ligne : l'icône va juste avant celle-ci (juste après si on
+                                // descend dans la même zone). Venue d'une autre zone, elle en change aussi.
+                                .dropDestination(for: String.self) { cles, _ in
+                                    guard let cle = cles.first, cle != i.cle,
+                                          let tenue = controleur.icones.first(where: { $0.cle == cle }) else { return false }
+                                    let de = liste.firstIndex { $0.cle == cle }, a = liste.firstIndex { $0.cle == i.cle }
+                                    controleur.ordonner(tenue, pres: i, apres: de.map { d in a.map { d < $0 } ?? false } ?? false)
+                                    return true
+                                }
+                        }
                     }
                 }
             }
@@ -351,6 +371,13 @@ struct LigneIcone: View {
 
     var body: some View {
         HStack {
+            Image(systemName: "line.3.horizontal")
+                .foregroundStyle(.tertiary)
+                .frame(width: 16, height: 22)
+                .contentShape(Rectangle())
+                .draggable(icone.cle) { Label(icone.nom, systemImage: "line.3.horizontal").padding(4) }
+                .help("Glisser sur une autre ligne pour changer l'ordre")
+                .disabled(controleur.rangementEnCours != nil)
             if let pid = icone.element?.pid, let image = NSRunningApplication(processIdentifier: pid)?.icon {
                 Image(nsImage: image).resizable().frame(width: 18, height: 18)
             }

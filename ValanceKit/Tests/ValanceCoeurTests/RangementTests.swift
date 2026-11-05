@@ -17,6 +17,13 @@ struct RangementTests {
         #expect(Rangement.pointDeDepot(vers: .toujoursMasquee, fleche: fleche, separateur: separateur, toujoursMasque: nil) == nil)
     }
 
+    @Test func pointPourChangerLOrdre() {
+        let b = Cadre(x: 140, y: 0, largeur: 20, hauteur: 24)
+        #expect(Rangement.pointPourOrdre(voisine: b, apres: false).x == 139)
+        #expect(Rangement.pointPourOrdre(voisine: b, apres: true).x == 161)
+        #expect(Rangement.pointPourOrdre(voisine: b, apres: true).y == 12)
+    }
+
     // MacBook 14" (encoche) à l'origine, grand écran à gauche, un peu plus haut.
     let macbook = EcranDecrit(id: 1, nom: "MacBook", cadre: Cadre(x: 0, y: 0, largeur: 1728, hauteur: 1117), hauteurBarre: 38,
                               largeurGaucheEncoche: 764, largeurDroiteEncoche: 779)

@@ -18,14 +18,16 @@ enum Deplaceur {
         await pause(40)
         poster(.leftMouseDown, depart, commande: true)
         await pause(150)   // macOS « décroche » l'icône
-        let pas = 14
+        // Lent exprès : vers la droite, un glisser rapide (14 pas, 0,2 s) est ignoré par macOS 26 ; 1 s de glisser
+        // et une demi-seconde de pause avant de lâcher passent dans les deux sens (vérifié le 05/11/2026).
+        let pas = 50
         for i in 1...pas {
             let t = Double(i) / Double(pas)
             poster(.leftMouseDragged, CGPoint(x: depart.x + (arrivee.x - depart.x) * t, y: depart.y + (arrivee.y - depart.y) * t),
                    commande: true)
-            await pause(16)
+            await pause(20)
         }
-        await pause(120)
+        await pause(500)
         poster(.leftMouseUp, arrivee, commande: true)
         await pause(60)
         CGWarpMouseCursorPosition(origine)
