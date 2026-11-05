@@ -99,3 +99,9 @@ le renouveler, au risque de déconnecter Claude Code. Valance lance donc Claude 
 message au modèle, aucun jeton manipulé, Claude Code gère sa connexion. Toutes les 10 minutes, et à l'ouverture du menu si
 le relevé a plus de 2 minutes. `get_usage` est marquée expérimentale par Claude Code : si elle change, l'icône affiche
 « — » avec la raison dans son menu. Option désactivée par défaut ; Claude Code doit être connecté (`claude auth login`).
+
+## V15 — Panneau au niveau de la barre, quel que soit l'écran actif (0.4.1)
+
+`isFloatingPanel = true` remet le niveau du panneau à « flottant » (3) : réglé avant, `.statusBar` était perdu, et sur un
+écran inactif le panneau passait sous la barre ou ne s'affichait pas. Le niveau est maintenant réglé après. À savoir : sur
+un écran inactif, macOS garde le premier clic dans la barre pour activer cet écran ; seul le second atteint la flèche.

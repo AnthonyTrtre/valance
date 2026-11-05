@@ -1,4 +1,5 @@
 import AppKit
+import SocleCore
 import SwiftUI
 import ValanceCoeur
 
@@ -39,9 +40,12 @@ final class BarreSecondaire {
             self?.fermer()
             self?.surChoix?(icone)
         }
+        Journal.app.info("Panneau : \(vignettes.count) vignettes, cadre \(Int(cadre.minX)),\(Int(cadre.minY)) \(Int(cadre.width))×\(Int(cadre.height)), plus large \(Int(tailles.map(\.largeur).max() ?? 0)) pt, écran \(ecran.nom, privacy: .public)")
         let p = NSPanel(contentRect: cadre, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
-        p.level = .statusBar
+        // `isFloatingPanel` remet le niveau à « flottant » : on règle le niveau après, sinon le panneau passe sous la
+        // barre d'un écran inactif, voire ne s'affiche pas.
         p.isFloatingPanel = true
+        p.level = .statusBar
         p.hidesOnDeactivate = false
         p.isOpaque = false
         p.backgroundColor = .clear
