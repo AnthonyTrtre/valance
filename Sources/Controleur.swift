@@ -34,6 +34,14 @@ final class Controleur {
     }() {
         didSet { UserDefaults.standard.set(enAttente.mapValues(\.rawValue), forKey: "valance.enAttente.v1") }
     }
+    /// Icônes visibles passées « au clic » le temps de sortir la flèche de l'encoche (de gauche à droite, dans l'ordre
+    /// où elles ont été écartées) ; remises en visible dès qu'un écran sans encoche est branché.
+    private(set) var temporaires: [String] = UserDefaults.standard.stringArray(forKey: "valance.temporaires.v1") ?? [] {
+        didSet { UserDefaults.standard.set(temporaires, forKey: "valance.temporaires.v1") }
+    }
+    @ObservationIgnored private var degagementsEpisode = 0
+    @ObservationIgnored private var echecsEpisode: Set<String> = []
+    @ObservationIgnored private var finRangement = Date.distantPast
     static let attenteEcran = "attente d'un écran plus large"
     private(set) var appsEcartees: [String] = []
     private(set) var dernierReleve: Date?
@@ -418,11 +426,41 @@ final class Controleur {
     /// Refait les rangements mis en attente, une fois les icônes relues.
     func reprendreAttente(dans delai: Double) {
         // Seulement quand un écran sans encoche est branché : sinon rien n'a changé, inutile de tout révéler.
-        guard !enAttente.isEmpty, reglages.inventaireActive, ecrans.contains(where: { $0.largeurGaucheEncoche == nil }) else { return }
+        guard !enAttente.isEmpty || !temporaires.isEmpty, reglages.inventaireActive,
+              ecrans.contains(where: { $0.largeurGaucheEncoche == nil }) else { return }
         differer(delai) { [weak self] in
             guard let self else { return }
             for (cle, s) in self.enAttente { if let i = self.icones.first(where: { $0.cle == cle }) { self.ranger(i, vers: s) } }
+            // Chacune est lâchée juste à droite de la flèche : en commençant par la dernière écartée, l'ordre revient.
+            for cle in self.temporaires.reversed() {
+                if let i = self.icones.first(where: { $0.cle == cle && $0.section != .visible }) { self.ranger(i, vers: .visible) }
+            }
+            if !self.temporaires.isEmpty { Journal.app.info("Encoche : \(self.temporaires.count) icône(s) remises en visible") }
+            self.temporaires = []
         }
+    }
+
+    /// Flèche sous l'encoche : passe « au clic » l'icône visible la plus à gauche qu'on peut saisir (à droite de
+    /// l'encoche). Une à la fois ; l'analyse suivante dit s'il en faut une autre. Faux si rien n'est possible.
+    private func degagerFleche(_ f: Cadre) -> Bool {
+        // Positions sûres seulement : barre masquée, inventaire relu au moins une seconde après le dernier rangement.
+        guard reglages.inventaireActive, accessibiliteAccordee, rangementEnCours == nil, fileRangement.isEmpty,
+              !visibilite.estRevelee, let releve = dernierReleve, releve > finRangement.addingTimeInterval(1),
+              degagementsEpisode < 10 else { return false }
+        let h = EcransMac.hauteurPrincipal, hb = EcransMac.hauteurBarreParDefaut
+        let candidate = icones
+            .filter { $0.section == .visible && $0.element != nil && !$0.estFixe && !temporaires.contains($0.cle)
+                && !echecsEpisode.contains($0.cle) }
+            .map { ($0, ref($0.cadre)) }
+            .filter { $0.1.minX >= f.maxX - 1
+                && Rangement.estAtteignable(x: $0.1.milieuX, y: $0.1.milieuY, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) }
+            .min { $0.1.minX < $1.1.minX }?.0
+        guard let candidate else { return false }
+        degagementsEpisode += 1
+        temporaires.append(candidate.cle)
+        Journal.app.info("Encoche : \(candidate.cle, privacy: .public) passée au clic le temps de sortir la flèche")
+        ranger(candidate, vers: .masquee)
+        return true
     }
 
     func actualiserEcrans() {
@@ -441,6 +479,13 @@ final class Controleur {
         let cachee = barre?.cadreFleche.map {
             Rangement.flecheCachee($0, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: EcransMac.hauteurBarreParDefaut)
         } ?? false
+        if !cachee { degagementsEpisode = 0; echecsEpisode = [] }
+        // D'abord écarter des icônes visibles (la fin du rangement relance l'analyse) ; à défaut, rétrécir nos affichages.
+        if cachee, let f = barre?.cadreFleche, degagerFleche(f) {
+            flecheCachee = cachee
+            return
+        }
+        if rangementEnCours != nil { return }
         if let f = barre?.cadreFleche, ajusterExtras(fleche: f, cachee: cachee) {
             differer(0.6) { [weak self] in self?.analyserEncoche() }
             return
@@ -540,6 +585,9 @@ final class Controleur {
                                                separateur: self.barre?.cadreSeparateur.map(self.ref),
                                                toujoursMasque: self.reglages.sectionToujoursMasquee ? self.barre?.cadreToujoursMasque.map(self.ref) : nil)
             self.dernierReleve = t
+            // Au lancement l'analyse passe avant que la flèche ait sa place, et une app peut ajouter une icône à tout
+            // moment : on la refait à chaque inventaire.
+            if self.rangementEnCours == nil && !self.releveApresRangement { self.analyserEncoche() }
         }
     }
 
@@ -747,6 +795,9 @@ final class Controleur {
                 self?.actualiserInventaire()
                 self?.releveApresRangement = false
             }
+            finRangement = Date()
+            // Relu barre masquée (l'analyse de l'encoche suit chaque inventaire).
+            differer(2.5) { [weak self] in self?.actualiserInventaire() }
             return
         }
         let (cle, vers) = fileRangement.removeFirst()
@@ -767,6 +818,12 @@ final class Controleur {
                 Journal.app.error("Rangement de \(cle, privacy: .public) : \(erreur, privacy: .public)")
             }
             if erreur == nil { self.enAttente[cle] = nil }
+            // Écartée pour la flèche mais restée visible : on l'oublie (la suivante sera essayée).
+            if erreur != nil, vers == .masquee, self.temporaires.contains(cle) {
+                self.temporaires.removeAll { $0 == cle }
+                self.enAttente[cle] = nil
+                self.echecsEpisode.insert(cle)
+            }
             self.rangerSuivante()
         }
     }
@@ -793,7 +850,8 @@ final class Controleur {
                   sousEncocheAccepte || Rangement.estAtteignable(x: arrivee.x, y: arrivee.y, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else {
                 return Self.attenteEcran
             }
-            await Deplaceur.glisser(de: CGPoint(x: depart.x, y: depart.y), a: CGPoint(x: arrivee.x, y: arrivee.y))
+            await Deplaceur.glisser(de: CGPoint(x: depart.x, y: depart.y), a: CGPoint(x: arrivee.x, y: arrivee.y),
+                                    lent: arrivee.x > depart.x)
             try? await Task.sleep(for: .milliseconds(500))
         }
         return "l'icône n'a pas bougé (cette app refuse peut-être d'être déplacée)"

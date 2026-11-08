@@ -34,5 +34,5 @@ Scripts/publier.sh 0.3.0   # DMG + zip Sparkle + appcast, à joindre à la Relea
  lancez Valance, ouvrez Réglages → **Icônes**, accordez l'Accessibilité, puis choisissez la section de
 chaque icône (Visible, Masquée) : Valance la ⌘-glisse lui-même à sa place. On peut aussi ⌘-glisser à la main, en trois zones : à droite
 de la flèche ‹, toujours visible ; à sa gauche, visible au clic sur la flèche ; à gauche de l'œil barré (affiché quand les
-icônes sont révélées), toujours caché. L'ordre se change de la même façon : ⌘ enfoncé, glissez l'icône où vous voulez dans la barre. Clic sur la flèche : révéler / masquer ; ⌥-clic : tout révéler ;
+icônes sont révélées), toujours caché. L'ordre se change de la même façon : ⌘ enfoncé, glissez l'icône où vous voulez dans la barre. Sur un écran à encoche, si la flèche finit sous l'encoche, Valance passe temporairement « au clic » les icônes visibles les plus à gauche, et les remet dès qu'un écran sans encoche est branché. Clic sur la flèche : révéler / masquer ; ⌥-clic : tout révéler ;
 clic droit : menu ; ⌃⌥⌘V : raccourci global.

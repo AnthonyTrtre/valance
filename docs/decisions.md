@@ -119,3 +119,14 @@ Sur le MacBook seul, trop d'icônes visibles poussaient la flèche sous l'encoch
 paliers, jusqu'à ce que la flèche ressorte : 1, versions courtes (« 131G », « 71% ») ; 2, disque éteint ; 3, Claude éteint
 aussi. Chaque palier mesure de combien il a décalé la flèche ; on ne revient en arrière que si elle reste visible avec
 8 pt de marge, ce qui évite d'osciller.
+
+## V18 — Flèche sous l'encoche : les icônes visibles de gauche passent « au clic » le temps qu'il faut (0.4.6)
+
+Plutôt que de rétrécir ses propres affichages, Valance ⌘-glisse dans la zone « au clic », une à une, les icônes visibles
+les plus à gauche qu'on peut saisir (à droite de l'encoche), jusqu'à ce que la flèche ressorte. Il les note
+(`valance.temporaires.v1`) et les remet en visible, en commençant par la dernière écartée, dès qu'un écran sans encoche
+est branché. L'analyse suit chaque inventaire (une app peut ajouter une icône à tout moment) et ne se fie qu'à un
+inventaire relu barre masquée, au moins une seconde après le dernier rangement. Une icône qui refuse de bouger n'est pas
+retentée dans le même épisode. Les paliers de V17 ne servent plus que sans Accessibilité. Vers la droite, le ⌘-glisser
+simulé est lent (sinon macOS l'ignore sur de courtes distances).
+
