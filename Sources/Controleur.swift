@@ -101,8 +101,41 @@ final class Controleur {
             claude = IndicateurClaude()
             claude?.surReglages = { [weak self] in self?.ouvrirReglages() }
         } else {
-            claude?.visible = oui
+            claude?.visible = oui && !extrasRanges
         }
+    }
+
+    /// Flèche poussée sous l'encoche (MacBook seul, trop d'icônes visibles) : Valance éteint ses propres affichages
+    /// (disque, Claude) pour lui rendre la place, et les rallume dès qu'ils tiennent de nouveau.
+    @ObservationIgnored private(set) var extrasRanges = false
+    @ObservationIgnored private var largeurExtras = 0.0
+
+    private func appliquerExtras() {
+        if reglages.afficherDisque { disque?.visible = !extrasRanges && !placeLiberee }
+        if reglages.afficherClaude { claude?.visible = !extrasRanges && !placeLiberee }
+    }
+
+    /// Vrai si l'état des affichages vient de changer (la flèche va bouger : on relira sa place).
+    private func ajusterExtras(fleche f: Cadre, cachee: Bool) -> Bool {
+        guard !placeLiberee else { return false }
+        let h = EcransMac.hauteurPrincipal, hb = EcransMac.hauteurBarreParDefaut
+        if !extrasRanges {
+            let w = (reglages.afficherDisque ? disque?.largeur ?? 0 : 0) + (reglages.afficherClaude ? claude?.largeur ?? 0 : 0)
+            guard cachee, w > 0 else { return false }
+            // Inutile s'ils ne suffisent pas à sortir la flèche de l'encoche.
+            let liberee = Cadre(x: f.minX + w, y: f.minY, largeur: f.largeur, hauteur: f.hauteur)
+            guard !Rangement.flecheCachee(liberee, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else { return false }
+            largeurExtras = w
+            extrasRanges = true
+        } else {
+            // Marge : les écarts entre icônes déplacent la flèche d'un peu plus que la largeur des affichages.
+            let avec = Cadre(x: f.minX - largeurExtras - 24, y: f.minY, largeur: f.largeur, hauteur: f.hauteur)
+            guard !Rangement.flecheCachee(avec, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else { return false }
+            extrasRanges = false
+        }
+        Journal.app.info("Encoche : disque et Claude \(self.extrasRanges ? "rangés" : "rallumés", privacy: .public) (\(Int(self.largeurExtras)) pt)")
+        appliquerExtras()
+        return true
     }
 
     private func afficherDisque(_ oui: Bool) {
@@ -111,7 +144,7 @@ final class Controleur {
             disque = IndicateurDisque()
             disque?.surReglages = { [weak self] in self?.ouvrirReglages() }
         } else {
-            disque?.visible = oui
+            disque?.visible = oui && !extrasRanges
         }
     }
 
@@ -407,6 +440,10 @@ final class Controleur {
         let cachee = barre?.cadreFleche.map {
             Rangement.flecheCachee($0, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: EcransMac.hauteurBarreParDefaut)
         } ?? false
+        if let f = barre?.cadreFleche, ajusterExtras(fleche: f, cachee: cachee) {
+            differer(0.6) { [weak self] in self?.analyserEncoche() }
+            return
+        }
         // Seul moyen de le dire à l'utilisateur, puisque la flèche est invisible : ouvrir les réglages (une fois par épisode).
         if cachee && !flecheCachee && rangementEnCours == nil && !Autotest.actif { ouvrirReglages() }
         flecheCachee = cachee
@@ -577,8 +614,7 @@ final class Controleur {
         guard oui != placeLiberee else { return }
         placeLiberee = oui
         barre?.reduireFleche(oui)
-        if reglages.afficherDisque { disque?.visible = !oui }
-        if reglages.afficherClaude { claude?.visible = !oui }
+        appliquerExtras()
         if !oui, let m = moniteurRetour { NSEvent.removeMonitor(m); moniteurRetour = nil }
     }
 

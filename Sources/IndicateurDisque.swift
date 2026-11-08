@@ -37,6 +37,9 @@ final class IndicateurDisque: NSObject, NSMenuDelegate {
     }
 
     /// Éteint : largeur nulle, pas `isVisible` ni retrait, qui font oublier sa place à AppKit (macOS 26).
+    /// Largeur occupée dans la barre (0 si éteint).
+    var largeur: Double { Double(item.button?.window?.frame.width ?? 0) }
+
     var visible = true {
         didSet {
             item.length = visible ? NSStatusItem.variableLength : 0
