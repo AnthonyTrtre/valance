@@ -39,8 +39,8 @@ final class IndicateurClaude: NSObject, NSMenuDelegate {
         }
     }
 
-    /// Largeur occupée dans la barre (0 si éteint).
-    var largeur: Double { Double(item.button?.window?.frame.width ?? 0) }
+    /// Version courte (« 71% », sans espaces) quand la place manque sous l'encoche.
+    var compact = false { didSet { if compact != oldValue { afficher() } } }
 
     /// Éteint : largeur nulle, pas `isVisible` ni retrait, qui font oublier sa place à AppKit (macOS 26).
     var visible = true {
@@ -76,7 +76,7 @@ final class IndicateurClaude: NSObject, NSMenuDelegate {
         b.imagePosition = .imageLeading
         let texte: String, couleur: NSColor
         if let u = derniere {
-            texte = " \(Int(u.restantSemaine.rounded())) %"
+            texte = compact ? "\(Int(u.restantSemaine.rounded()))%" : " \(Int(u.restantSemaine.rounded())) %"
             couleur = u.restantSemaine < 5 ? .systemRed : (u.bientotEpuise ? .systemOrange : .labelColor)
         } else {
             texte = " —"

@@ -101,39 +101,40 @@ final class Controleur {
             claude = IndicateurClaude()
             claude?.surReglages = { [weak self] in self?.ouvrirReglages() }
         } else {
-            claude?.visible = oui && !extrasRanges
+            claude?.visible = oui && niveauExtras < 3
         }
     }
 
-    /// Flèche poussée sous l'encoche (MacBook seul, trop d'icônes visibles) : Valance éteint ses propres affichages
-    /// (disque, Claude) pour lui rendre la place, et les rallume dès qu'ils tiennent de nouveau.
-    @ObservationIgnored private(set) var extrasRanges = false
-    @ObservationIgnored private var largeurExtras = 0.0
+    /// Flèche poussée sous l'encoche (MacBook seul, trop d'icônes visibles) : Valance rétrécit ses propres affichages
+    /// par paliers jusqu'à ce qu'elle ressorte. 1 : versions courtes ; 2 : disque éteint ; 3 : Claude éteint aussi.
+    /// Chaque palier note de combien il a décalé la flèche, pour ne revenir en arrière que si elle reste visible.
+    @ObservationIgnored private(set) var niveauExtras = 0
+    @ObservationIgnored private var gains: [Int: Double] = [:]
+    @ObservationIgnored private var xAvantPalier: Double?
 
     private func appliquerExtras() {
-        if reglages.afficherDisque { disque?.visible = !extrasRanges && !placeLiberee }
-        if reglages.afficherClaude { claude?.visible = !extrasRanges && !placeLiberee }
+        disque?.compact = niveauExtras >= 1
+        claude?.compact = niveauExtras >= 1
+        if reglages.afficherDisque { disque?.visible = niveauExtras < 2 && !placeLiberee }
+        if reglages.afficherClaude { claude?.visible = niveauExtras < 3 && !placeLiberee }
     }
 
-    /// Vrai si l'état des affichages vient de changer (la flèche va bouger : on relira sa place).
+    /// Vrai si un palier vient de changer (la flèche va bouger : on relira sa place).
     private func ajusterExtras(fleche f: Cadre, cachee: Bool) -> Bool {
         guard !placeLiberee else { return false }
+        if let x = xAvantPalier { gains[niveauExtras] = max(0, f.minX - x); xAvantPalier = nil }
         let h = EcransMac.hauteurPrincipal, hb = EcransMac.hauteurBarreParDefaut
-        if !extrasRanges {
-            let w = (reglages.afficherDisque ? disque?.largeur ?? 0 : 0) + (reglages.afficherClaude ? claude?.largeur ?? 0 : 0)
-            guard cachee, w > 0 else { return false }
-            // Inutile s'ils ne suffisent pas à sortir la flèche de l'encoche.
-            let liberee = Cadre(x: f.minX + w, y: f.minY, largeur: f.largeur, hauteur: f.hauteur)
-            guard !Rangement.flecheCachee(liberee, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else { return false }
-            largeurExtras = w
-            extrasRanges = true
+        if cachee, niveauExtras < 3, reglages.afficherDisque || reglages.afficherClaude {
+            xAvantPalier = f.minX
+            niveauExtras += 1
+        } else if !cachee, niveauExtras > 0, let g = gains[niveauExtras],
+                  !Rangement.flecheCachee(Cadre(x: f.minX - g - 8, y: f.minY, largeur: f.largeur, hauteur: f.hauteur),
+                                          ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) {
+            niveauExtras -= 1
         } else {
-            // Marge : les écarts entre icônes déplacent la flèche d'un peu plus que la largeur des affichages.
-            let avec = Cadre(x: f.minX - largeurExtras - 24, y: f.minY, largeur: f.largeur, hauteur: f.hauteur)
-            guard !Rangement.flecheCachee(avec, ecrans: ecrans, hauteurEcranPrincipal: h, hauteurParDefaut: hb) else { return false }
-            extrasRanges = false
+            return false
         }
-        Journal.app.info("Encoche : disque et Claude \(self.extrasRanges ? "rangés" : "rallumés", privacy: .public) (\(Int(self.largeurExtras)) pt)")
+        Journal.app.info("Encoche : affichages de Valance au palier \(self.niveauExtras)")
         appliquerExtras()
         return true
     }
@@ -144,7 +145,7 @@ final class Controleur {
             disque = IndicateurDisque()
             disque?.surReglages = { [weak self] in self?.ouvrirReglages() }
         } else {
-            disque?.visible = oui && !extrasRanges
+            disque?.visible = oui && niveauExtras < 2
         }
     }
 

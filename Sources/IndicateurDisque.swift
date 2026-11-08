@@ -37,8 +37,8 @@ final class IndicateurDisque: NSObject, NSMenuDelegate {
     }
 
     /// Éteint : largeur nulle, pas `isVisible` ni retrait, qui font oublier sa place à AppKit (macOS 26).
-    /// Largeur occupée dans la barre (0 si éteint).
-    var largeur: Double { Double(item.button?.window?.frame.width ?? 0) }
+    /// Version courte (« 131G ») quand la place manque sous l'encoche.
+    var compact = false { didSet { if compact != oldValue { actualiser() } } }
 
     var visible = true {
         didSet {
@@ -55,7 +55,8 @@ final class IndicateurDisque: NSObject, NSMenuDelegate {
     func actualiser() {
         guard visible else { return }
         guard let v = Self.volumes().first else { item.button?.title = "—"; return }
-        let titre = FormatDisque.court(v.libre)
+        var titre = FormatDisque.court(v.libre)
+        if compact { titre = titre.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "o", with: "") }
         item.button?.attributedTitle = NSAttributedString(string: titre, attributes: [
             .font: NSFont.monospacedDigitSystemFont(ofSize: NSFont.systemFontSize - 1, weight: .regular),
             .foregroundColor: v.estPresquePlein ? NSColor.systemOrange : NSColor.labelColor,

@@ -112,10 +112,10 @@ La 0.4.2 ajoutait une bande glissable dans les réglages, qui ⌘-glissait elle-
 macOS fait déjà, ⌘ enfoncé, directement dans la barre, et en plus lentement. La 0.4.3 la retire avec le clic droit
 « Déplacer » ; un encart en tête de Général et d'Icônes explique le ⌘-glisser.
 
-## V17 — Flèche sous l'encoche : Valance range ses propres affichages (0.4.4)
+## V17 — Flèche sous l'encoche : Valance rétrécit ses propres affichages par paliers (0.4.4, revu en 0.4.5)
 
-Sur le MacBook seul, trop d'icônes visibles poussaient la flèche sous l'encoche : plus moyen de rien révéler. Valance
-éteint alors l'espace disque et l'utilisation de Claude (largeur nulle, place gardée) si cela suffit à sortir la flèche,
-et les rallume quand ils tiennent de nouveau, avec 24 pt de marge pour ne pas osciller (les écarts entre icônes déplacent
-la flèche d'un peu plus que leur largeur).
-
+Sur le MacBook seul, trop d'icônes visibles poussaient la flèche sous l'encoche : plus moyen de rien révéler. La 0.4.4
+éteignait d'un coup l'espace disque et l'utilisation de Claude, et l'utilisateur ne les voyait plus. La 0.4.5 procède par
+paliers, jusqu'à ce que la flèche ressorte : 1, versions courtes (« 131G », « 71% ») ; 2, disque éteint ; 3, Claude éteint
+aussi. Chaque palier mesure de combien il a décalé la flèche ; on ne revient en arrière que si elle reste visible avec
+8 pt de marge, ce qui évite d'osciller.
