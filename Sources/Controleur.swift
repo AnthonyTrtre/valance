@@ -769,14 +769,20 @@ final class Controleur {
         }
         let souris = NSEvent.mouseLocation
         guard let ici = Ecrans.ecran(contenant: Double(souris.x), Double(souris.y), parmi: ecrans), let ref = ecranQuartz(f) else { return true }
-        var largeurMenus = 0.0
-        if let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
-           let m = await avecEcheance(0.5, file: fileMenus, { @Sendable in LecteurAccessibilite.finMenus(pid: pid) }) ?? nil,
-           let e = ecranQuartz(m) {
-            largeurMenus = m.maxX - Repere.versQuartz(e.cadre, hauteurEcranPrincipal: h).minX
+        // Menus de l'app illisibles (délai, app sans barre lisible) : on ne parie pas, panneau.
+        guard let pid = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              let m = await avecEcheance(0.5, file: fileMenus, { @Sendable in LecteurAccessibilite.finMenus(pid: pid) }) ?? nil,
+              let e = ecranQuartz(m) else {
+            Journal.app.info("Place : menus de l'app au premier plan illisibles → panneau")
+            return false
         }
+        let largeurMenus = m.maxX - Repere.versQuartz(e.cadre, hauteurEcranPrincipal: h).minX
         let distance = Repere.versQuartz(ref.cadre, hauteurEcranPrincipal: h).maxX - f.minX
-        let tient = Rangement.tientDansLaBarre(largeurIcones: largeur, distanceFlecheBordDroit: distance, largeurMenusApp: largeurMenus, ecran: ici)
+        // Révélées dans la barre, les icônes s'ouvrent sur la barre de TOUS les écrans : il faut la place partout,
+        // sinon sur le MacBook elles filent sous l'encoche alors que l'écran externe en avait assez.
+        let tient = ecrans.allSatisfy {
+            Rangement.tientDansLaBarre(largeurIcones: largeur, distanceFlecheBordDroit: distance, largeurMenusApp: largeurMenus, ecran: $0)
+        }
         Journal.app.info("Place : écran \(ici.nom, privacy: .public) (\(Int(ici.cadre.largeur))), icônes masquées \(Int(largeur)) pt sur \(self.icones.filter { $0.section == .masquee }.count), flèche à \(Int(distance)) du bord, menus \(Int(largeurMenus)) → \(tient ? "barre" : "panneau", privacy: .public)")
         return tient
     }

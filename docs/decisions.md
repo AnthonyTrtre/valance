@@ -138,3 +138,10 @@ Valance n'active jamais Valance ; `yieldActivation(to:)` seul ne fait donc rien.
 s'active un instant (`NSApp.activate()`), cède le premier plan à l'app (`yieldActivation(to:)`), puis presse l'entrée.
 Vérifié avec une app de la barre sans contournement de son côté : sa fenêtre de réglages s'ouvre devant et prend le clavier.
 
+
+## V20 — Mode auto : la place se vérifie sur tous les écrans (0.4.8)
+
+Révélées dans la barre, les icônes masquées s'ouvrent sur la barre de chaque écran. Le mode « dans la barre s'il y a
+la place » ne regardait que l'écran de la souris : avec un écran externe large, il choisissait la barre, et sur l'écran
+du MacBook les icônes partaient sur le côté, sous l'encoche. Valance exige désormais la place sur tous les écrans, sinon
+il ouvre le panneau en dessous. Si les menus de l'app au premier plan sont illisibles, il choisit aussi le panneau.
