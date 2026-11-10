@@ -130,3 +130,11 @@ inventaire relu barre masquée, au moins une seconde après le dernier rangement
 retentée dans le même épisode. Les paliers de V17 ne servent plus que sans Accessibilité. Vers la droite, le ⌘-glisser
 simulé est lent (sinon macOS l'ignore sur de courtes distances).
 
+## V19 — Menu relayé : céder le premier plan à l'app avant de choisir l'entrée (0.4.7)
+
+Depuis le panneau, choisir « Réglages… » d'une autre app ouvrait sa fenêtre derrière les autres : depuis macOS 14,
+l'activation est coopérative, et l'app ne peut se mettre devant que si l'app active lui cède la main. Le panneau de
+Valance n'active jamais Valance ; `yieldActivation(to:)` seul ne fait donc rien. Sur le choix de l'utilisateur, Valance
+s'active un instant (`NSApp.activate()`), cède le premier plan à l'app (`yieldActivation(to:)`), puis presse l'entrée.
+Vérifié avec une app de la barre sans contournement de son côté : sa fenêtre de réglages s'ouvre devant et prend le clavier.
+

@@ -615,7 +615,14 @@ final class Controleur {
 
     private func afficherMenu(_ entrees: [EntreeMenu], pid: pid_t, rang: Int, en point: NSPoint) {
         let relais = RelaisMenu { chemin in
-            Task {
+            Task { @MainActor in
+                // Activation coopérative (macOS 14+) : seule l'app active peut céder le premier plan. Valance (panneau
+                // non activant) s'active donc un instant, sur ce choix de l'utilisateur, puis le cède à l'app : sinon la
+                // fenêtre que l'entrée ouvre (« Réglages… ») resterait derrière.
+                if let app = NSRunningApplication(processIdentifier: pid) {
+                    NSApp.activate()
+                    NSApp.yieldActivation(to: app)
+                }
                 let ok = await avecEcheance(2, file: fileMenus) { @Sendable in
                     LecteurAccessibilite.choisir(pid: pid, rang: rang, chemin: chemin)
                 }
