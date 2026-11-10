@@ -20,8 +20,11 @@ final class BarreSecondaire {
     private var moniteurClic: Any?
     private var moniteursSouris: [Any] = []
     var surChoix: ((IconeBarre) -> Void)?
+    /// Pendant qu'un menu relayé est ouvert sous le panneau, la souris peut s'éloigner sans le fermer.
+    var enPause = false
 
     var estOuverte: Bool { panneau?.isVisible ?? false }
+    var cadre: CGRect? { panneau?.frame }
 
     func afficher(_ vignettes: [Vignette], message: String?, ancreX: Double, ecran: EcranDecrit) {
         fermer()
@@ -37,8 +40,7 @@ final class BarreSecondaire {
         }
         let vue = VueBarreSecondaire(vignettes: vignettes, cadres: mise.vignettes, taillePanneau: cadre.size,
                                      message: message) { [weak self] icone in
-            self?.fermer()
-            self?.surChoix?(icone)
+            self?.surChoix?(icone)   // le panneau reste ouvert : le menu de l'icône se déplie dessous
         }
         Journal.app.info("Panneau : \(vignettes.count) vignettes, cadre \(Int(cadre.minX)),\(Int(cadre.minY)) \(Int(cadre.width))×\(Int(cadre.height)), plus large \(Int(tailles.map(\.largeur).max() ?? 0)) pt, écran \(ecran.nom, privacy: .public)")
         let p = NSPanel(contentRect: cadre, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -59,16 +61,19 @@ final class BarreSecondaire {
         moniteurClic = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             self?.fermer()
         }
-        // La souris quitte le panneau (et la barre juste au-dessus, d'où elle vient) : il se ferme seul.
-        let zone = cadre.insetBy(dx: -12, dy: 0).union(cadre.offsetBy(dx: 0, dy: 40).insetBy(dx: -12, dy: 0))
+        // La souris s'éloigne nettement du panneau (et de la barre juste au-dessus, d'où elle vient) : il se ferme
+        // seul. Marge large, pour qu'un geste un peu imprécis ne le fasse pas disparaître.
+        let zone = cadre.insetBy(dx: -80, dy: -80).union(cadre.offsetBy(dx: 0, dy: 40).insetBy(dx: -80, dy: 0))
         let surveiller: (NSEvent) -> Void = { [weak self] _ in
-            if !zone.contains(NSEvent.mouseLocation) { self?.fermer() }
+            guard let self, !self.enPause else { return }
+            if !zone.contains(NSEvent.mouseLocation) { self.fermer() }
         }
         moniteursSouris = [NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved, handler: surveiller) as Any,
                            NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { surveiller($0); return $0 } as Any]
     }
 
     func fermer() {
+        enPause = false
         if let m = moniteurClic {
             NSEvent.removeMonitor(m)
             moniteurClic = nil

@@ -145,3 +145,11 @@ La 0.4.8 exigeait la place sur tous les écrans, puisque les icônes révélées
 MacBook à encoche branché, cela imposait le panneau partout, même sur un grand écran qui avait la place. En 0.4.9,
 seul l'écran de la souris décide, comme avant. Reste de la 0.4.8 : si les menus de l'app au premier plan sont
 illisibles, Valance ouvre le panneau au lieu de supposer qu'ils sont vides.
+
+## V21 — Panneau : marge large, et il reste ouvert sous le menu d'une icône (0.5.0)
+
+Le panneau se fermait dès que la souris s'écartait de 12 pt : il disparaissait au moindre geste imprécis. La marge passe
+à 80 pt tout autour (plus la barre au-dessus). Cliquer une icône du panneau ne le ferme plus : le menu de l'app se
+déplie juste en dessous, sous l'icône, et la surveillance de la souris est suspendue tant qu'il est ouvert. Choisir une
+entrée ferme le panneau ; Échap ou un clic à côté ferment le menu et laissent le panneau. Les icônes sans menu lisible
+(clic réel sur l'icône, ou ouverture de l'app) ferment le panneau comme avant.

@@ -598,6 +598,7 @@ final class Controleur {
     ///    l'icône si elle est à l'écran. 3. Sinon : on ouvre l'app.
     private func activer(_ icone: IconeBarre) {
         guard let e = icone.element, LecteurAccessibilite.estAutorise else {
+            barreSecondaire.fermer()
             evenement(.revelerTemporairement(duree: max(reglages.delaiRepli, 5)))
             return
         }
@@ -608,6 +609,7 @@ final class Controleur {
             if let menu, !menu.isEmpty {
                 self.afficherMenu(menu, pid: pid, rang: rang, en: ou)
             } else {
+                self.barreSecondaire.fermer()
                 await self.cliquerVraiment(cle: cle, pid: pid)
             }
         }
@@ -615,7 +617,8 @@ final class Controleur {
 
     private func afficherMenu(_ entrees: [EntreeMenu], pid: pid_t, rang: Int, en point: NSPoint) {
         let relais = RelaisMenu { chemin in
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                self?.barreSecondaire.fermer()
                 // Activation coopérative (macOS 14+) : seule l'app active peut céder le premier plan. Valance (panneau
                 // non activant) s'active donc un instant, sur ce choix de l'utilisateur, puis le cède à l'app : sinon la
                 // fenêtre que l'entrée ouvre (« Réglages… ») resterait derrière.
@@ -631,7 +634,11 @@ final class Controleur {
         }
         let menu = relais.construire(entrees)
         relaisMenu = relais
-        menu.popUp(positioning: nil, at: NSPoint(x: point.x - 8, y: point.y - 14), in: nil)
+        // Le panneau reste affiché et le menu se déplie juste en dessous, sous l'icône cliquée.
+        let y = barreSecondaire.cadre.map { $0.minY - 4 } ?? point.y - 14
+        barreSecondaire.enPause = true
+        menu.popUp(positioning: nil, at: NSPoint(x: point.x - 8, y: y), in: nil)
+        barreSecondaire.enPause = false
     }
 
     /// Sur un MacBook seul, l'icône révélée tombe souvent sous l'encoche, à quelques points de la partie visible.
