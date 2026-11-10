@@ -778,11 +778,9 @@ final class Controleur {
         }
         let largeurMenus = m.maxX - Repere.versQuartz(e.cadre, hauteurEcranPrincipal: h).minX
         let distance = Repere.versQuartz(ref.cadre, hauteurEcranPrincipal: h).maxX - f.minX
-        // Révélées dans la barre, les icônes s'ouvrent sur la barre de TOUS les écrans : il faut la place partout,
-        // sinon sur le MacBook elles filent sous l'encoche alors que l'écran externe en avait assez.
-        let tient = ecrans.allSatisfy {
-            Rangement.tientDansLaBarre(largeurIcones: largeur, distanceFlecheBordDroit: distance, largeurMenusApp: largeurMenus, ecran: $0)
-        }
+        // Seul compte l'écran qu'on regarde (celui de la souris) : exiger la place partout imposait le panneau
+        // dès qu'un MacBook à encoche était branché (V20).
+        let tient = Rangement.tientDansLaBarre(largeurIcones: largeur, distanceFlecheBordDroit: distance, largeurMenusApp: largeurMenus, ecran: ici)
         Journal.app.info("Place : écran \(ici.nom, privacy: .public) (\(Int(ici.cadre.largeur))), icônes masquées \(Int(largeur)) pt sur \(self.icones.filter { $0.section == .masquee }.count), flèche à \(Int(distance)) du bord, menus \(Int(largeurMenus)) → \(tient ? "barre" : "panneau", privacy: .public)")
         return tient
     }

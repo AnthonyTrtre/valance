@@ -139,9 +139,9 @@ s'active un instant (`NSApp.activate()`), cède le premier plan à l'app (`yield
 Vérifié avec une app de la barre sans contournement de son côté : sa fenêtre de réglages s'ouvre devant et prend le clavier.
 
 
-## V20 — Mode auto : la place se vérifie sur tous les écrans (0.4.8)
+## V20 — Mode auto : l'écran de la souris décide ; menus illisibles → panneau (0.4.8, 0.4.9)
 
-Révélées dans la barre, les icônes masquées s'ouvrent sur la barre de chaque écran. Le mode « dans la barre s'il y a
-la place » ne regardait que l'écran de la souris : avec un écran externe large, il choisissait la barre, et sur l'écran
-du MacBook les icônes partaient sur le côté, sous l'encoche. Valance exige désormais la place sur tous les écrans, sinon
-il ouvre le panneau en dessous. Si les menus de l'app au premier plan sont illisibles, il choisit aussi le panneau.
+La 0.4.8 exigeait la place sur tous les écrans, puisque les icônes révélées s'ouvrent sur chaque barre. Avec un
+MacBook à encoche branché, cela imposait le panneau partout, même sur un grand écran qui avait la place. En 0.4.9,
+seul l'écran de la souris décide, comme avant. Reste de la 0.4.8 : si les menus de l'app au premier plan sont
+illisibles, Valance ouvre le panneau au lieu de supposer qu'ils sont vides.
